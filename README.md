@@ -135,3 +135,15 @@ Hiraku の `listen` はアプリケーション本来の `address:port` 形式�
 `dtv.card.enable = true` で PC/SC、CCID、pcsc-tools を有効にします。
 `dtv.card.rw5100Support = true` を追加すると、RW5100 プラグインと USB のアクセス権を設定します。
 `dtv.card.plugins` には追加のプラグインを指定できます。既存のパッケージ overlay も反映されます。
+
+## 設定例
+
+三点セットと分離構成は [samples](samples/README.md) を参照してください。
+
+## HonomiTV の設定
+
+`services.honomitv.settings` と `encoder` は、`config.yaml` が存在しない場合だけ
+初期設定を書き込みます。HonomiTV で保存した変更は、再起動や NixOS の rebuild 後も
+保持されます。初回起動後はアプリケーション側で設定を編集してください。
+ファイアウォール、ディレクトリーへのアクセス、サービス間の依存関係は引き続き
+Nix で管理するため、アプリ側でポートや保存先を変える際は Nix 側も合わせてください。

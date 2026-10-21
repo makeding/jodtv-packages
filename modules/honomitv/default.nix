@@ -17,6 +17,10 @@ let
   };
 
   configFile = format.generate "config.yaml" finalSettings;
+  initialConfig = import ./initial-config.nix {
+    inherit lib;
+    inherit (pkgs) coreutils;
+  };
 in
 {
   options.services.honomitv = {
@@ -31,12 +35,12 @@ in
       ];
       default = "FFmpeg";
       description = ''
-        Video encoder to use for transcoding.
+        Video encoder written to the initial configuration. Existing config.yaml is preserved.
 
         - FFmpeg: Software encoder (CPU-based, works everywhere but slow)
         - QSVEncC: Intel Quick Sync Video (requires Intel CPU with integrated graphics)
 
-        For other encoders (NVEncC, VCEEncC, rkmppenc), set via settings.general.encoder.
+        After initialization, the encoder can be changed in HonomiTV.
       '';
       example = "QSVEncC";
     };
@@ -45,7 +49,9 @@ in
       type = format.type;
       default = { };
       description = ''
-        Configuration for HonomiTV.
+        Initial configuration for HonomiTV, written only when config.yaml is absent.
+        Existing files and changes saved by HonomiTV survive restarts and rebuilds.
+        Firewall ports and directory access remain managed by Nix.
         See config.example.yaml in the source repository for available options.
 
         Note: general.encoder is automatically set from services.honomitv.encoder option.
@@ -136,9 +142,8 @@ in
         mkdir -p ${cfg.dataDir}
         mkdir -p ${cfg.logsDir}
 
-        # Copy config file
-        cp ${configFile} ${cfg.dataDir}/config.yaml
-        chmod 640 ${cfg.dataDir}/config.yaml
+        # Seed once; preserve configuration saved by the application.
+        ${initialConfig configFile "${cfg.dataDir}/config.yaml"}
 
         # Create subdirectories in data dir (HONOMITV_DATA_DIR points to ./data)
         mkdir -p ${cfg.dataDir}/data/account-icons
@@ -212,11 +217,11 @@ in
             cfg.logsDir
           ]
           # Allow read access to recorded video folders if configured
-          (lib.optional (cfg.settings ? video && cfg.settings.video ? recorded_folders) (
+          (lib.optionals (cfg.settings ? video && cfg.settings.video ? recorded_folders) (
             map (folder: folder) cfg.settings.video.recorded_folders
           ))
           # Allow write access to capture upload folders if configured
-          (lib.optional (cfg.settings ? capture && cfg.settings.capture ? upload_folders) (
+          (lib.optionals (cfg.settings ? capture && cfg.settings.capture ? upload_folders) (
             map (folder: folder) cfg.settings.capture.upload_folders
           ))
         ];

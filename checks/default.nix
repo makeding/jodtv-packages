@@ -31,3 +31,4 @@ in
     pkgs.runCommand "jodtv-packages-dependency-injection" { } "touch $out";
 }
 // import ./dtv.nix { inherit self nixpkgs pkgs; }
+// import ./honomitv.nix { inherit pkgs; }

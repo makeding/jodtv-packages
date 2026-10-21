@@ -127,3 +127,15 @@ Smart-card readers are optional and independent of recorder decoding flags.
 `dtv.card.enable = true` enables PC/SC, CCID and pcsc-tools. Add
 `dtv.card.rw5100Support = true` for the RW5100 plugin and USB permissions.
 `dtv.card.plugins` accepts additional plugins; existing package overlays remain effective.
+
+## Samples
+
+See [samples](samples/README.en.md) for the three-service setup and split capture/frontend configurations.
+
+## HonomiTV configuration
+
+`services.honomitv.settings` and `encoder` seed `config.yaml` only when it does not
+exist. Changes saved by HonomiTV survive restarts and NixOS rebuilds. After the
+first start, edit the application configuration directly. Nix still manages
+firewall ports, directory access and service dependencies; keep their settings
+aligned if you change ports or storage paths in the application.
