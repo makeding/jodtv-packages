@@ -50,6 +50,7 @@ let
     "elevate"
     "grapheme"
     "pyjsparser"
+    "pymediainfo"
   ];
   buildSystemOverrides =
     final: prev:
@@ -58,9 +59,14 @@ let
       prev.${name}.overrideAttrs (old: {
         nativeBuildInputs =
           (old.nativeBuildInputs or [ ])
-          ++ final.resolveBuildSystem {
-            setuptools = [ ];
-          };
+          ++ final.resolveBuildSystem (
+            {
+              setuptools = [ ];
+            }
+            // lib.optionalAttrs (name == "pymediainfo") {
+              setuptools-scm = [ ];
+            }
+          );
       })
     );
   pythonSet =
@@ -260,6 +266,7 @@ stdenv.mkDerivation {
     platforms = platforms.unix;
   };
   passthru = {
+    inherit pythonSet;
     pythonVersion = python.pythonVersion;
   };
 }

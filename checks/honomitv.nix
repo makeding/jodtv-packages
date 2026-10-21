@@ -5,6 +5,12 @@ let
   next = pkgs.writeText "honomitv-next.yaml" "encoder: QSVEncC\n";
 in
 {
+  # Build the locked source distribution to catch missing legacy build backends.
+  honomitv-pymediainfo = pkgs.runCommand "honomitv-pymediainfo" { } ''
+    export PYTHONPATH=${pkgs.honomitv.pythonSet.pymediainfo}/${pkgs.python314.sitePackages}
+    ${pkgs.python314.interpreter} -c 'import pymediainfo; from importlib.metadata import version; assert version("pymediainfo") == "6.1.0"'
+    touch $out
+  '';
   honomitv-initial-config = pkgs.runCommand "honomitv-initial-config" { } ''
     ${seed first "config.yaml"}
     cmp ${first} config.yaml
