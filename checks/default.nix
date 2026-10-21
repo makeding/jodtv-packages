@@ -34,7 +34,7 @@ let
           # This fixture exercises the real Hiraku service definition. Its
           # pinned source has no license grant, so opt in only in this check.
           nixpkgs.config.allowUnfreePredicate = p: lib.getName p == "hiraku";
-          hardware.jpdtv.tuners = [
+          hardware.jodtv-packages.tuners = [
             "pt3"
             "tbs6812"
           ];
@@ -58,10 +58,10 @@ in
 {
   dependency-injection =
     assert injectable;
-    pkgs.runCommand "jpdtv-dependency-injection" { } "touch $out";
+    pkgs.runCommand "jodtv-packages-dependency-injection" { } "touch $out";
 }
 // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
   modules =
     assert moduleContract;
-    pkgs.runCommand "jpdtv-modules" { } "touch $out";
+    pkgs.runCommand "jodtv-packages-modules" { } "touch $out";
 }

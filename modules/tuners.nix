@@ -1,6 +1,6 @@
 { config, lib, ... }:
 let
-  cfg = config.hardware.jpdtv;
+  cfg = config.hardware.jodtv-packages;
   drivers = {
     pt3 = {
       file = ../kernel-modules/pt3.nix;
@@ -28,7 +28,7 @@ let
   selected = map (name: drivers.${name}) cfg.tuners;
 in
 {
-  options.hardware.jpdtv.tuners = lib.mkOption {
+  options.hardware.jodtv-packages.tuners = lib.mkOption {
     type = lib.types.listOf (lib.types.enum (builtins.attrNames drivers));
     default = [ ];
     example = [

@@ -24,25 +24,23 @@
 }:
 let
   pname = "honomitv";
-  version = "0.14.1-unstable-2026-10-20";
+  version = "0.14.1-unstable-2026-10-21";
   python = pythonInterpreter;
 
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "HonomiTV";
     # Public makeding/HonomiTV fork, pinned to a clean committed revision.
-    rev = "fd5cd80f709800bdb37828bdf43ee47de79f0dae";
-    hash = "sha256-uCwt6gjnqzqd00WWNA6B/7IhxcVAJH58VDPFRqrTqZw=";
+    rev = "362adee838d9e013ad869e4089e0f72eeac43910";
+    hash = "sha256-+iALgTKHJ8FtLvB9Iz2E0yoSyg8do6W6Ap5KWYp+Gx8=";
   };
 
   qsvenccForHost = if stdenv.hostPlatform.isLinux then qsvencc else null;
 
-  pythonManifest = ./python314/pyproject.toml;
-  pythonLock = ./python314/uv.lock;
+  pythonManifest = src + "/server/pyproject.toml";
+  pythonLock = src + "/server/uv.lock";
   workspace = uv2nix.lib.workspace.loadWorkspace {
     workspaceRoot = src + "/server";
-    pyproject = builtins.fromTOML (builtins.readFile pythonManifest);
-    uvLock = builtins.fromTOML (builtins.readFile pythonLock);
   };
   pyprojectOverlay = workspace.mkPyprojectOverlay {
     sourcePreference = "wheel";
