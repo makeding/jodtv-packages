@@ -20,7 +20,6 @@ let
           nixpkgs.config.allowUnfreePredicate =
             p:
             builtins.elem (lib.getName p) [
-              "hiraku"
               "pcsc-rw5100"
             ];
         }
