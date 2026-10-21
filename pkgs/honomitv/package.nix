@@ -31,8 +31,8 @@ let
     owner = "makeding";
     repo = "HonomiTV";
     # Public makeding/HonomiTV fork, pinned to a clean committed revision.
-    rev = "362adee838d9e013ad869e4089e0f72eeac43910";
-    hash = "sha256-+iALgTKHJ8FtLvB9Iz2E0yoSyg8do6W6Ap5KWYp+Gx8=";
+    rev = "b39c61750fe4c9ed2ca0e07231cd1604c7a75344";
+    hash = "sha256-c+sTLqo/O0aomO9a3vY8KukYhCop4W5Z4dsxgMjj7oE=";
   };
 
   qsvenccForHost = if stdenv.hostPlatform.isLinux then qsvencc else null;
@@ -51,6 +51,7 @@ let
     "grapheme"
     "pyjsparser"
     "pymediainfo"
+    "pyppmd"
   ];
   buildSystemOverrides =
     final: prev:
@@ -63,9 +64,15 @@ let
             {
               setuptools = [ ];
             }
-            // lib.optionalAttrs (name == "pymediainfo") {
-              setuptools-scm = [ ];
-            }
+            //
+              lib.optionalAttrs
+                (builtins.elem name [
+                  "pymediainfo"
+                  "pyppmd"
+                ])
+                {
+                  setuptools-scm = [ ];
+                }
           );
       })
     );
@@ -105,7 +112,7 @@ let
 
       offlineCache = fetchYarnDeps {
         yarnLock = "${src}/client/yarn.lock";
-        hash = "sha256-ntJ61HaneW0M5UhfivkjLSET44cd15pErsYsutiOReM=";
+        hash = "sha256-cfTe1kENLpRxNW+NSwg554LnYlUPQ2/EPRhUrrYXUIk=";
       };
 
       buildPhase = ''
@@ -266,7 +273,7 @@ stdenv.mkDerivation {
     platforms = platforms.unix;
   };
   passthru = {
-    inherit pythonSet;
+    inherit pythonSet pythonEnv frontend;
     pythonVersion = python.pythonVersion;
   };
 }

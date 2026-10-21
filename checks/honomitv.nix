@@ -11,6 +11,25 @@ in
     ${pkgs.python314.interpreter} -c 'import pymediainfo; from importlib.metadata import version; assert version("pymediainfo") == "6.1.0"'
     touch $out
   '';
+  honomitv-build = pkgs.runCommand "honomitv-build" { } ''
+    ${pkgs.honomitv.pythonEnv}/bin/python - <<'PYTHON'
+    import pyppmd
+    import py7zr
+    import fastapi
+    import tortoise
+    import pymediainfo
+    from importlib.metadata import version
+
+    assert version("pyppmd") == "1.1.1"
+    assert version("pymediainfo") == "6.1.0"
+    payload = b"HonomiTV dependency smoke test" * 100
+    assert pyppmd.decompress(pyppmd.compress(payload)) == payload
+    PYTHON
+    test -s ${pkgs.honomitv.frontend}/share/honomitv/index.html
+    ${pkgs.honomitv}/bin/honomitv --help > help.txt
+    test -s help.txt
+    touch $out
+  '';
   honomitv-initial-config = pkgs.runCommand "honomitv-initial-config" { } ''
     ${seed first "config.yaml"}
     cmp ${first} config.yaml
