@@ -1,0 +1,46 @@
+diff --git a/processes.json b/processes.json
+index b54d404..a40dfab 100644
+--- a/processes.json
++++ b/processes.json
+@@ -4,10 +4,10 @@
+       "name": "mirakurun-server",
+       "script": "lib/server.js",
+       "node_args" : "-r source-map-support/register",
+-      "error_file": "/usr/local/var/log/mirakurun.stderr.log",
+-      "out_file": "/usr/local/var/log/mirakurun.stdout.log",
++      "error_file": "/var/log/mirakurun.stderr.log",
++      "out_file": "/var/log/mirakurun.stdout.log",
+       "merge_logs": true,
+-      "pid_file": "/usr/local/var/run/mirakurun.pid",
++      "pid_file": "/var/run/mirakurun.pid",
+       "exec_mode": "fork",
+       "autorestart": true,
+       "env": {
+diff --git a/src/Mirakurun/config.ts b/src/Mirakurun/config.ts
+index e460c8c..cb35264 100644
+--- a/src/Mirakurun/config.ts
++++ b/src/Mirakurun/config.ts
+@@ -149,6 +149,7 @@ export function loadServer(): Server {
+         try {
+             log.info("copying default server config to `%s`", path);
+             fs.copyFileSync("config/server.yml", path);
++            fs.chmodSync(path, 0o644);
+         } catch (e) {
+             log.fatal("failed to copy server config to `%s`", path);
+             console.error(e);
+@@ -351,6 +352,7 @@ export function loadTuners(): Tuner[] {
+         try {
+             log.info("copying default tuners config to `%s`", path);
+             fs.copyFileSync("config/tuners.yml", path);
++            fs.chmodSync(path, 0o644);
+         } catch (e) {
+             log.fatal("failed to copy tuners config to `%s`", path);
+             console.error(e);
+@@ -389,6 +391,7 @@ export function loadChannels(): Channel[] {
+         try {
+             log.info("copying default channels config to `%s`", path);
+             fs.copyFileSync("config/channels.yml", path);
++            fs.chmodSync(path, 0o644);
+         } catch (e) {
+             log.fatal("failed to copy channels config to `%s`", path);
+             console.error(e);
