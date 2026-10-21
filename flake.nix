@@ -39,6 +39,7 @@
 
     in
     {
+      lib = import ./lib { inherit lib; };
       overlays.default = import ./overlay.nix { inherit inputs; };
       packages = forAllSystems (
         system:
@@ -81,16 +82,14 @@
         default = {
           imports = with self.nixosModules; [
             packages
-            hirakud
+            dtv
             honomitv
-            epgstation
-            tuners
           ];
         };
         hirakud = ./modules/hirakud.nix;
         honomitv = ./modules/honomitv;
         epgstation = ./modules/epgstation.nix;
-        tuners = ./modules/tuners.nix;
+        dtv = ./modules/dtv;
       };
       checks = forAllSystems (
         system:

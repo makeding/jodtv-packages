@@ -16,14 +16,14 @@ in
       description = "Update EPGStation EPG once";
       wants = [
         "network-online.target"
-        "mirakurun.service"
         "mysql.service"
-      ];
+      ]
+      ++ lib.optional config.services.mirakurun.enable "mirakurun.service";
       after = [
         "network-online.target"
-        "mirakurun.service"
         "mysql.service"
-      ];
+      ]
+      ++ lib.optional config.services.mirakurun.enable "mirakurun.service";
       environment.NODE_ENV = "production";
 
       serviceConfig = {
