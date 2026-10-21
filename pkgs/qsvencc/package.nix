@@ -11,6 +11,7 @@
   cargo-c,
   libva,
   libdrm,
+  libx11,
   ffmpeg,
   libass,
   intel-media-driver,
@@ -47,6 +48,7 @@ stdenv.mkDerivation rec {
   buildInputs = [
     libva
     libdrm
+    libx11
     ffmpeg
     libass
     intel-media-driver
