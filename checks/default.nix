@@ -26,6 +26,26 @@ let
       ];
 in
 {
+  # The release archive must report its version without a Git checkout.
+  qsvencc-source-version = public.qsvencc.overrideAttrs (old: {
+    pname = "qsvencc-source-version";
+    nativeBuildInputs = [ ];
+    buildInputs = [ ];
+    phases = [
+      "unpackPhase"
+      "patchPhase"
+      "checkPhase"
+      "installPhase"
+    ];
+    doCheck = true;
+    checkPhase = ''
+      test "$(sh scripts/get-version.sh)" = "${old.version}"
+    '';
+    installPhase = "touch $out";
+    meta = old.meta // {
+      platforms = lib.platforms.unix;
+    };
+  });
   dependency-injection =
     assert injectable;
     pkgs.runCommand "jodtv-packages-dependency-injection" { } "touch $out";

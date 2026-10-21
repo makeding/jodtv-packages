@@ -58,13 +58,6 @@ stdenv.mkDerivation rec {
 
   enableParallelBuilding = true;
 
-  postPatch = ''
-    substituteInPlace meson.build \
-      --replace-fail \
-        "version: run_command('git', 'describe', '--tags', '--abbrev=0', check: true).stdout().strip()," \
-        "version: '${version}',"
-  '';
-
   mesonFlags = [
     "-Denable_vapoursynth=false"
     "-Denable_avisynth=false"
