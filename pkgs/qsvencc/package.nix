@@ -56,6 +56,8 @@ stdenv.mkDerivation rec {
     opencl-headers
   ];
 
+  # CMake is needed by Meson's bundled oneVPL build, not as the top-level driver.
+  dontUseCmakeConfigure = true;
   enableParallelBuilding = true;
 
   mesonFlags = [

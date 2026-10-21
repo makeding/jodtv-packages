@@ -29,7 +29,14 @@ in
   # The release archive must report its version without a Git checkout.
   qsvencc-source-version = public.qsvencc.overrideAttrs (old: {
     pname = "qsvencc-source-version";
-    nativeBuildInputs = [ ];
+    nativeBuildInputs = builtins.filter (
+      input:
+      builtins.elem (lib.getName input) [
+        "cmake"
+        "meson"
+        "ninja"
+      ]
+    ) old.nativeBuildInputs;
     buildInputs = [ ];
     phases = [
       "unpackPhase"
@@ -39,6 +46,7 @@ in
     ];
     doCheck = true;
     checkPhase = ''
+      test "$configurePhase" = mesonConfigurePhase
       test "$(sh scripts/get-version.sh)" = "${old.version}"
     '';
     installPhase = "touch $out";
