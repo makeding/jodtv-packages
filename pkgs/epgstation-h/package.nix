@@ -13,18 +13,18 @@
 
 buildNpmPackage rec {
   pname = "epgstation";
-  version = "2.10.1-unstable-2026-10-22";
+  version = "3.0.0-beta2-unstable-2026-10-22";
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "EPGStation";
-    rev = "30c578bd1cebd436e9be553af6371dd2b0c4c9ab";
-    sha256 = "sha256-GFeYb2g4ECyUR7W+mIE58Jf//cAgm+MV6cS31LB5CRw=";
+    rev = "85712b6a79efb345d52f6b35e2e06cd55bff5e6c";
+    sha256 = "sha256-ly7xcUNv2CqKfuyq39dOrFwwzp1y2rfakamsJMp6SCM=";
   };
 
   nodejs = nodejs_24;
 
   #  makeCacheWritable = true;
-  npmDepsHash = "sha256-uiivzfk9sANSiTYHzZpcNgxgVA6Kh1UO+Nkcq74bSH0=";
+  npmDepsHash = "sha256-dBqcxTfpgqvy0jE6cmsu+1h+gCJRJYLK9nypIOTUsZA=";
   npmBuildScript = "build-server";
   npmRootPath = "/lib/node_modules/epgstation";
 
@@ -95,6 +95,8 @@ buildNpmPackage rec {
       pushd $out$npmRootPath
 
       mv config/enc.js.template $out/libexec/enc.js
+      # The standalone encoder lives outside the application's ESM package scope.
+      echo '{"type":"module"}' > $out/libexec/package.json
       mv LICENSE Readme.md $out/share/doc/epgstation
       mv doc/* $out/share/doc/epgstation
       sed 's/@DESCRIPTION@/${meta.description}/g' ${./epgstation.1} > doc/epgstation.1
@@ -124,6 +126,23 @@ buildNpmPackage rec {
 
       popd
     '';
+  doInstallCheck = true;
+  installCheckPhase = ''
+    runHook preInstallCheck
+    test -s $out$npmRootPath/client/dist/index.html
+    test -s $out$npmRootPath/dist/db/entities/EncodeQueue.js
+    ${nodejs}/bin/node --check $out/libexec/enc.js
+    cd $out$npmRootPath
+    ${nodejs}/bin/node --input-type=module -e '
+      import Database from "better-sqlite3";
+      import "fs-ext";
+      import "./dist/model/tuner/TunerServerAccessModel.js";
+      const db = new Database(":memory:");
+      db.close();
+    '
+    runHook postInstallCheck
+  '';
+
   meta = with lib; {
     description = "Mirakurun を使用した録画管理ソフト";
     homepage = "https://github.com/l3tnun/EPGStation";
