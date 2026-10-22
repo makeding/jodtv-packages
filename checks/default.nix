@@ -27,6 +27,18 @@ let
       ];
 in
 {
+  # Run the Rust B61 stream wrapper against the packaged external C library.
+  recisdb-b61 = public.recisdb.overrideAttrs (old: {
+    pname = "recisdb-b61-wrapper";
+    buildFeatures = [ ];
+    buildAndTestSubdir = "b61-sys";
+    buildInputs = [ pkgs.libaribb61 ];
+    nativeBuildInputs = [ pkgs.pkg-config ];
+    installPhase = "touch $out";
+    meta = old.meta // {
+      platforms = lib.platforms.unix;
+    };
+  });
   # Validate the real upstream B61 configure path on the check host, without DVB hardware.
   recdvb4k-b61-configure = pkgs.stdenv.mkDerivation {
     pname = "recdvb4k-b61-configure";
@@ -82,11 +94,21 @@ in
   });
   dependency-injection =
     assert injectable;
+    assert hasInput public.recisdb pkgs.libaribb61;
+    assert hasInput (public.recisdb.override { libaribb61 = marker; }) marker;
+    assert !(hasInput (public.recisdb.override { libaribb61 = marker; }) pkgs.libaribb61);
     assert hasInput public.recdvb4k pkgs.libaribb61;
     assert hasInput (public.recdvb4k.override { libaribb61 = marker; }) marker;
     assert !(hasInput (public.recdvb4k.override { libaribb61 = marker; }) pkgs.libaribb61);
     assert public.recisdb.buildNoDefaultFeatures;
-    assert public.recisdb.buildFeatures == [ "bg-runtime" ];
+    assert
+      public.recisdb.buildFeatures == (
+        [
+          "bg-runtime"
+          "b61"
+        ]
+        ++ lib.optional pkgs.stdenv.hostPlatform.isLinux "dvb"
+      );
     assert !(public.recisdb.src.fetchSubmodules or false);
     pkgs.runCommand "jodtv-packages-dependency-injection" { } "touch $out";
 }
