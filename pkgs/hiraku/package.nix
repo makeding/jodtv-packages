@@ -6,7 +6,7 @@
 
 buildGoModule {
   pname = "hiraku";
-  version = "0-unstable-2026-10-21";
+  version = "unstable-2026-10-21";
 
   src = fetchFromGitHub {
     owner = "makeding";

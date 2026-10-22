@@ -14,7 +14,7 @@
 
 buildNpmPackage rec {
   pname = "mirakurun";
-  version = "4.1.5-huggy-20261005";
+  version = "4.1.5-unstable-2026-10-05";
 
   src = fetchFromGitHub {
     owner = "makeding";

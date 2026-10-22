@@ -10,12 +10,12 @@
 
 stdenv.mkDerivation rec {
   pname = "recdvb4k";
-  version = "15bf583fa632512993bc76cf55c6ad54d7599e71";
+  version = "1.2.1.1-unstable-2026-10-22";
 
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "recdvb4k";
-    rev = version;
+    rev = "15bf583fa632512993bc76cf55c6ad54d7599e71";
     hash = "sha256-ghi4stNSVmOv1A+WrY3pCSuJH9Z3BEYS9VR/4tXlITo=";
   };
 

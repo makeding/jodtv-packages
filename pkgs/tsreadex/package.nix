@@ -6,7 +6,7 @@
 
 stdenv.mkDerivation rec {
   pname = "tsreadex";
-  version = "unstable-2026-04-28";
+  version = "master-260428";
 
   src = fetchFromGitHub {
     owner = "xtne6f";

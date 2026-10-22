@@ -6,7 +6,7 @@
 
 stdenv.mkDerivation rec {
   pname = "psisimux";
-  version = "unstable-2026-04-22";
+  version = "master-260422";
 
   src = fetchFromGitHub {
     owner = "xtne6f";

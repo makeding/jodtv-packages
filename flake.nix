@@ -41,14 +41,19 @@
     {
       lib = import ./lib { inherit lib; };
       overlays.default = import ./overlay.nix { inherit inputs; };
+      # Complete definitions for native source/dependency maintenance, including
+      # packages whose final binaries are not supported on this system.
+      legacyPackages = forAllSystems (
+        system:
+        import ./pkgs {
+          inherit (pkgsFor system) callPackage;
+          inherit inputs;
+        }
+      );
       packages = forAllSystems (
         system:
         let
-          pkgs = pkgsFor system;
-          all = import ./pkgs {
-            inherit (pkgs) callPackage;
-            inherit inputs;
-          };
+          all = self.legacyPackages.${system};
           darwin = [
             "epgstation-h"
             "hiraku"

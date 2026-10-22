@@ -8,7 +8,7 @@
 
 stdenv.mkDerivation {
   pname = "libaribtlv";
-  version = "0.6.1";
+  version = "0.6.1-unstable-2026-08-28";
 
   src = fetchFromGitHub {
     owner = "makeding";

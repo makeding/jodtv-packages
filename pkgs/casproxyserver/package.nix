@@ -10,7 +10,7 @@
 
 stdenv.mkDerivation {
   pname = "casproxyserver";
-  version = "1.1.0";
+  version = "unstable-2026-04-26";
 
   src = fetchFromGitHub {
     owner = "nekohkr";

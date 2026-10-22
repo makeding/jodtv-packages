@@ -9,7 +9,7 @@
 }:
 stdenv.mkDerivation {
   pname = "pcsc-rw5100";
-  version = "1.0";
+  version = "0.1.0-unstable-2026-09-14";
   src = fetchzip {
     url = "https://git.huggy.moe/rw5100/pcsc-rw5100/archive/43dc44c045adb1c2daa80c35c0a0982a6cebf1a8.tar.gz";
     hash = "sha256-+KlxK6nQjoc/oeu3rzr0R6jXtyHlGRRFh0SALeTt2o0=";

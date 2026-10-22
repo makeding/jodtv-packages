@@ -27,7 +27,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "tsreplace";
-  version = "0.19-unstable-2026-09-06";
+  version = "0.20-unstable-2026-09-05";
 
   src = fetchFromGitHub {
     owner = "makeding";

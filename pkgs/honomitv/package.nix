@@ -24,15 +24,15 @@
 }:
 let
   pname = "honomitv";
-  version = "0.14.1-unstable-2026-10-21";
+  version = "0.14.1-unstable-2026-10-22";
   python = pythonInterpreter;
 
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "HonomiTV";
     # Public makeding/HonomiTV fork, pinned to a clean committed revision.
-    rev = "b39c61750fe4c9ed2ca0e07231cd1604c7a75344";
-    hash = "sha256-c+sTLqo/O0aomO9a3vY8KukYhCop4W5Z4dsxgMjj7oE=";
+    rev = "b0fbc837cf74474dced7e815148b4804a5325b7d";
+    hash = "sha256-xjrA5TYZ6bu5M5+UHKqUP6z8B1MM1ZHLJZkJS57sVSk=";
   };
 
   qsvenccForHost = if stdenv.hostPlatform.isLinux then qsvencc else null;

@@ -10,6 +10,8 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tomllib
+from urllib.parse import quote, urlencode
 
 ROOT = Path(__file__).resolve().parent.parent
 # These track release tags; other packages track their default branch.
@@ -17,6 +19,18 @@ RELEASES = {"mirakc", "mirakc-arib", "intel-media-sdk-h", "qsvencc", "psisimux",
 SUBPACKAGES = {"honomitv": "frontend", "epgstation-h": "clientDir"}
 ALIASES = {"konomitv": "honomitv", "epgstation": "epgstation-h"}
 EXCLUDED = {"konomitv", "ffmpeg-libaribtlv"}
+MANIFESTS = {
+    "epgstation-h": ("package.json", "json"),
+    "honomitv": ("server/pyproject.toml", "project"),
+    "mirakurun": ("package.json", "json"),
+    "recisdb": ("recisdb-rs/Cargo.toml", "package"),
+    **{name: ("CMakeLists.txt", "cmake") for name in
+       ("libaribb25", "libaribb61", "libaribtlv", "librw5100", "pcsc-rw5100")},
+    "recdvb": ("configure.ac", "autoconf"),
+    "recdvb4k": ("configure.ac", "autoconf"),
+    "recpt1": ("recpt1/configure.ac", "autoconf"),
+    "tsreplace": ("app/rgy_version.h", "header"),
+}
 
 
 def native_system():
@@ -24,23 +38,80 @@ def native_system():
     return f"{machine}-{platform.system().lower()}"
 
 
-def refresh_epgstation_version(system):
-    # Forks without release tags are reported as version 0 by nix-update.
-    # Read the actual application version from the freshly fetched source.
-    result = subprocess.run(
-        ["nix", "build", "--no-link", "--print-out-paths",
-         f".#packages.{system}.epgstation-h.src"],
-        cwd=ROOT, check=True, stdout=subprocess.PIPE, text=True,
-    )
-    source = Path(result.stdout.strip())
-    version = json.loads((source / "package.json").read_text())["version"]
-    if not re.fullmatch(r"[0-9A-Za-z.+-]+", version):
-        raise ValueError("Invalid EPGStation package version")
-    package = ROOT / "pkgs/epgstation-h/package.nix"
-    text = package.read_text()
-    text = re.sub(r'version = "[^"\n]+(-unstable-\d{4}-\d{2}-\d{2})";',
-                  lambda match: f'version = "{version}{match[1]}";', text, count=1)
-    package.write_text(text)
+def fetch(url):
+    # Use the host's TLS-verified curl, including its normal CA/keychain support.
+    return subprocess.run(
+        ["curl", "--fail", "--silent", "--show-error", "--location",
+         "--max-time", "60", url], check=True, stdout=subprocess.PIPE, text=True,
+    ).stdout
+
+
+def manifest_version(contents, kind):
+    if kind == "json":
+        version = json.loads(contents)["version"]
+    elif kind in ("project", "package"):
+        version = tomllib.loads(contents)[kind]["version"]
+    else:
+        patterns = {
+            "cmake": r'(?is)\bproject\s*\([^)]*?\bVERSION\s+"?([0-9][0-9A-Za-z.+-]*)',
+            "autoconf": r'AC_INIT\s*\(\s*\[[^]]+\]\s*,\s*\[([^]]+)\]',
+            "header": r'(?m)^\s*#define\s+VER_STR_FILEVERSION\s+"([^"]+)"',
+        }
+        match = re.search(patterns[kind], contents)
+        if not match:
+            raise ValueError(f"Missing {kind} source version")
+        version = match[1]
+    if not isinstance(version, str) or not re.fullmatch(r"[0-9][0-9A-Za-z.+-]*", version):
+        raise ValueError(f"Invalid source version: {version!r}")
+    return version
+
+
+def prepare_branch(name, mode):
+    """Resolve an exact commit and its own manifest before writing any edits."""
+    package = ROOT / f"pkgs/{name}/package.nix"
+    original = package.read_text()
+    github = re.search(r'owner = "([^"]+)";\s*repo = ("[^"]+"|pname);', original)
+    archive = re.search(r'https://([^/]+)/([^/]+/[^/]+)/archive/([0-9a-f]{40})\.tar\.gz', original)
+    branch = mode.partition("=")[2] if "=" in mode else "HEAD"
+    if github:
+        repo = re.search(r'pname = "([^"]+)";', original)[1] if github[2] == "pname" else github[2].strip('"')
+        repository = f"{github[1]}/{repo}"
+        commit = json.loads(fetch(f"https://api.github.com/repos/{repository}/commits/{quote(branch, safe='')}"))
+        raw_base = f"https://raw.githubusercontent.com/{repository}"
+    elif archive:
+        host, repository = archive[1], archive[2]
+        query = urlencode({"sha": branch, "limit": 1})
+        commit = json.loads(fetch(f"https://{host}/api/v1/repos/{repository}/commits?{query}"))[0]
+        raw_base = f"https://{host}/{repository}/raw/commit"
+    else:
+        raise ValueError(f"No branch source configured for {name}")
+    revision = commit["sha"]
+    date = commit["commit"]["committer"]["date"][:10]
+    if not re.fullmatch(r"[0-9a-f]{40}", revision) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        raise ValueError(f"Invalid commit metadata for {name}")
+    version = f"unstable-{date}"
+    if name in MANIFESTS:
+        path, kind = MANIFESTS[name]
+        declared = manifest_version(fetch(f"{raw_base}/{revision}/{path}"), kind)
+        version = f"{declared}-{version}"
+    updated, count = re.subn(r'(?m)^(\s*version = ")[^"\n]+(";)',
+                             lambda m: m[1] + version + m[2], original, count=1)
+    if count != 1:
+        raise ValueError(f"Missing version declaration for {name}")
+    if github:
+        updated, count = re.subn(r'(?m)^(\s*rev = ")[^"\n]+(";)',
+                                 lambda m: m[1] + revision + m[2], updated, count=1)
+        if count != 1:
+            raise ValueError(f"{name} must pin src.rev independently of version")
+    else:
+        updated = updated.replace(archive[0], archive[0].replace(archive[3], revision), 1)
+    print(f"{name}: {version} (commit {revision})", flush=True)
+    if updated != original:
+        package.write_text(updated)
+
+
+def version_mode(name, args):
+    return args.version or ("stable" if name in RELEASES else "branch")
 
 
 def packages():
@@ -50,9 +121,11 @@ def packages():
 
 def commands(names, args):
     for name in names:
-        mode = args.version or ("stable" if name in RELEASES else "branch")
-        cmd = ["nix-update", name, "--flake", "--system", args.system,
-               "--version", mode, "--override-filename", f"pkgs/{name}/package.nix"]
+        mode = version_mode(name, args)
+        attribute = name if args.build else f"legacyPackages.{args.system}.{name}"
+        cmd = ["nix-update", attribute, "--flake", "--system", args.system,
+               "--version", "skip" if mode.startswith("branch") else mode,
+               "--override-filename", f"pkgs/{name}/package.nix"]
         if name == "intel-media-sdk-h":
             cmd += ["--version-regex", "intel-mediasdk-(.*)"]
         if name in SUBPACKAGES:
@@ -93,6 +166,12 @@ def main(argv=None):
         command = shlex.join([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])
         os.execvp("nix-shell", ["nix-shell", "-p", "nix-update", "--run", command])
     for name, command in zip(names, commands(names, args)):
+        mode = version_mode(name, args)
+        if mode.startswith("branch"):
+            if args.dry_run:
+                print(f"+ resolve {name} {mode} commit and source manifest", flush=True)
+            else:
+                prepare_branch(name, mode)
         print("+ " + shlex.join(command), flush=True)
         if args.dry_run:
             continue
@@ -100,8 +179,6 @@ def main(argv=None):
         if result.returncode:
             print("Update failed; inspect git diff before retrying. Partial edits are preserved.", file=sys.stderr)
             return result.returncode
-        if name == "epgstation-h" and (args.version is None or args.version.startswith("branch")):
-            refresh_epgstation_version(args.system)
     return 0
 
 

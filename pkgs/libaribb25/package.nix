@@ -9,13 +9,13 @@
 
 stdenv.mkDerivation {
   pname = "libaribb25";
-  version = "1fec6425319f38da4d6c3c2871b937e396dff369";
+  version = "0.2.10-unstable-2026-10-22";
 
   src = fetchFromGitHub {
     owner = "tsukumijima";
     repo = "libaribb25";
-    rev = "1fec6425319f38da4d6c3c2871b937e396dff369";
-    hash = "sha256-VwehXlhMJjWWyEooB95bTxXXB/uZIxzuksslnvsrgYY=";
+    rev = "0676da1cb1e43792555e127a6c062363af7d35c7";
+    hash = "sha256-1Ro9quedX3aSnIhPhxlGbNw4wZyWyhoJmhaWjXDJEO4=";
   };
 
   nativeBuildInputs = [

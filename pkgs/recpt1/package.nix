@@ -12,12 +12,12 @@
 
 stdenv.mkDerivation rec {
   pname = "recpt1";
-  version = "77c7bce2527e1df45cc8667ede753d09de7b3e6c";
+  version = "1.2.0-unstable-2025-07-29";
 
   src = fetchFromGitHub {
     owner = "stz2012";
     repo = "recpt1";
-    rev = version;
+    rev = "77c7bce2527e1df45cc8667ede753d09de7b3e6c";
     hash = "sha256-1bjAq5zYQ2PTAS+4ydWytfHaPREgjO5he2d9zYMFsvs=";
   };
   sourceRoot = "source/recpt1";
