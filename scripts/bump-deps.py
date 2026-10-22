@@ -11,7 +11,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 # These track release tags; other packages track their default branch.
-RELEASES = {"intel-media-sdk-h", "qsvencc", "psisimux", "tsreadex"}
+RELEASES = {"mirakc", "mirakc-arib", "intel-media-sdk-h", "qsvencc", "psisimux", "tsreadex"}
 SUBPACKAGES = {"honomitv": "frontend", "epgstation-h": "clientDir"}
 ALIASES = {"konomitv": "honomitv", "epgstation": "epgstation-h"}
 EXCLUDED = {"konomitv", "ffmpeg-libaribtlv"}

@@ -14,6 +14,8 @@
   libaribb61 = callPackage ./libaribb61/package.nix { };
   libaribtlv = callPackage ./libaribtlv/package.nix { };
   librw5100 = callPackage ./librw5100/package.nix { };
+  mirakc = callPackage ./mirakc/package.nix { };
+  mirakc-arib = callPackage ./mirakc-arib/package.nix { };
   mirakurun = callPackage ./mirakurun/package.nix { };
   pcsc-rw5100 = callPackage ./pcsc-rw5100/package.nix { };
   psisiarc = callPackage ./psisiarc/package.nix { };
