@@ -27,13 +27,13 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "tsreplace";
-  version = "0.20-unstable-2026-09-05";
+  version = "0.22-unstable-2026-10-22";
 
   src = fetchFromGitHub {
     owner = "makeding";
     repo = pname;
-    rev = "014c8d7e0b3da8fd415ebff5ec99796c6b867dbf";
-    hash = "sha256-0aoXFe8CSzwjM/M1TGnGTBmVJzeAHA/v1HrmFklwSK8=";
+    rev = "731c65c63efa3794e96321ad38b137d250e9e779";
+    hash = "sha256-2N58OSD7VOEyNfgPHsd6NDrQr6ajL/1XNfPnN5iynTg=";
   };
 
   nativeBuildInputs = [
