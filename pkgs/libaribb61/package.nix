@@ -15,8 +15,8 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "libaribb61";
-    rev = "cc38adca1a29345b59eacf3b3302cfa4dcb078fd";
-    hash = "sha256-XFi+VOcU6l4b7Td7X67I2EIYZ9sOt6s3GfoKTFo3vbw=";
+    rev = "dd1e079e2c4e0f13afa6ac3e2e45489309bb8efc";
+    hash = "sha256-xwmWAMzf+1G8ktuPf4BSLpD5NejpHOhBkPPlOu71LgI=";
   };
 
   nativeBuildInputs = [
