@@ -151,16 +151,20 @@ Nix で管理するため、アプリ側でポートや保存先を変える際�
 
 ## recisdb への移行
 
-PT3/PX4 は recisdb 1.3.0 を使用します。`dtv.packages.recpt1` は
+PT3/PX4 は recisdb 1.3.0（`3bdd062`）を使用します。`dtv.packages.recpt1` は
 `dtv.packages.recisdb` に変更してください。`args` は recisdb の構文
 （例: `--lnb 15v`）に更新してください。明示的な `command` は自動変換しません。
 Mirakurun/Hirakud 共通のアダプターが地上波の数値チャンネルに `T` を付け、
 BS/CS/C 形式はそのまま渡します。`b25 = false` は `--no-decode`、
 `strip = false` は `--no-strip` になります。DVB/BS4K は従来のツールを使います。
 
-外部 `libaribb25` を必須とし、内蔵ライブラリへのフォールバックはありません。
+外部 `libaribb25` と `libaribb61` を必須とし、内蔵ライブラリへのフォールバックはありません。
 差し替え先には SIMD を含む上流 B25 ABI が必要です。既定 feature を無効化し、
-`bg-runtime` のみ有効にするため、独自のカードリーダー優先機能（`--card`）は使えません。
+`bg-runtime`、`b61` と Linux の `dvb` を有効にします。
+`recisdb.override { libaribb61 = myB61Library; }` で B61 を独立して差し替えられます。
+`decode --b61` と実験的な DVB ISDB-S3 選局に対応します。生成済みチューナーの
+コマンド形式やデコーダーの既定値は変更しません。
+独自のカードリーダー優先機能（`--card`）は使えません。
 
 DIY 用に `recpt1` の独立パッケージと overlay 属性を引き続き公開します。
 外部 `libaribb25` の差し替えも可能です。チューナーで使う場合は

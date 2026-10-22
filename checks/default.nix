@@ -30,10 +30,10 @@ in
   # Run the Rust B61 stream wrapper against the packaged external C library.
   recisdb-b61 = public.recisdb.overrideAttrs (old: {
     pname = "recisdb-b61-wrapper";
-    buildFeatures = [ ];
+    cargoBuildFeatures = [ ];
+    cargoCheckFeatures = [ ];
     buildAndTestSubdir = "b61-sys";
     buildInputs = [ pkgs.libaribb61 ];
-    nativeBuildInputs = [ pkgs.pkg-config ];
     installPhase = "touch $out";
     meta = old.meta // {
       platforms = lib.platforms.unix;

@@ -143,7 +143,7 @@ aligned if you change ports or storage paths in the application.
 
 ## recisdb capture contract
 
-PT3/PX4 capture uses recisdb 1.3.0. `dtv.packages.recisdb` replaces the former
+PT3/PX4 capture uses recisdb 1.3.0 (`3bdd062`). `dtv.packages.recisdb` replaces the former
 `dtv.packages.recpt1` option. Custom `args` must use recisdb options (for example,
 `--lnb 15v`); explicit `command` values remain caller-owned.
 The generated adapter accepts existing numeric terrestrial channels and prefixes
@@ -152,9 +152,12 @@ use this adapter. Decoding and stripping stay enabled by default; `b25 = false`
 and `strip = false` generate `--no-decode` and `--no-strip` respectively.
 DVB and BS4K capture continue to use recdvb and recdvb4k.
 
-The package disables upstream default features and enables only `bg-runtime`.
-It requires the injected external `libaribb25` through pkg-config, with no bundled
-fallback. The library must provide the upstream B25 ABI (including SIMD support).
+The package disables upstream default features and enables `bg-runtime`, `b61`
+and Linux `dvb` support. Both `libaribb25` and `libaribb61` are package arguments
+resolved through pkg-config, with no bundled fallback. The B25 library must provide
+the upstream ABI (including SIMD support). `recisdb.override { libaribb61 = myB61Library; }`
+replaces B61 independently. The CLI provides `decode --b61` and experimental DVB
+ISDB-S3 tuning; existing generated tuner commands and decoder defaults stay unchanged.
 The upstream prioritized-card-reader extension is disabled; `--card` selection
 is therefore unavailable. Private library implementations remain consumer-owned.
 
