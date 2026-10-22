@@ -172,7 +172,9 @@ DIY 用に `recpt1` の独立パッケージと overlay 属性を引き続き公
 Linux/macOS 向けの独立した MMT/TLV ACAS デスクランブルライブラリです。
 パッケージ一覧と overlay で公開し、`nix build .#libaribb61` でビルドできます。
 ヘッダー `aribb61/arib_std_b61.h`、共有ライブラリ、pkg-config 用の
-`libaribb61.pc` をインストールします。録画ツールのデコーダー選択は変更しません。
-C API は B25 に似ていますが ABI 互換ではありません。上流の core/C API テストと
+`libaribb61.pc` をインストールします。C API は B25 に似ていますが ABI 互換ではありません。
+`recdvb4k` の `--b61` はこの共有ライブラリを使用し、ビルド時に B25/B61 の両方を必須にします。
+利用側で `recdvb4k.override { libaribb61 = myB61Library; }` により差し替えられます。
+通常の `recdvb` は独立した B25 専用ビルドです。上流の core/C API テストと
 インストール済みライブラリへの C API リンクを検証します。カード/プロキシや
 実放送のデスクランブルは別途実機での検証が必要です。

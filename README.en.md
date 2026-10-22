@@ -168,7 +168,16 @@ to that entry's `packages`. Generated PT3/PX4 commands use recisdb by default.
 `libaribb61` is an independent streaming MMT/TLV ACAS descrambler library,
 exported through the package set and overlay on Linux and macOS. It installs
 `aribb61/arib_std_b61.h`, the shared library and `libaribb61.pc` for pkg-config
-consumers. Build it with `nix build .#libaribb61`. This package does not change
-any recorder's decoder selection. Its C API resembles B25 but is not ABI compatible.
+consumers. Build it with `nix build .#libaribb61`. Its C API resembles B25 but is
+not ABI compatible. `recdvb4k` links this library for `--b61`; configure requires
+both B25 and B61 support. The library can be replaced by a consumer overlay:
+
+```nix
+final: prev: {
+  recdvb4k = prev.recdvb4k.override { libaribb61 = final.myB61Library; };
+}
+```
+
+The ordinary `recdvb` package remains a separate B25-only build.
 The build runs the upstream core/C API tests and an installed C API consumer;
 card/proxy and real broadcast descrambling require separate runtime verification.

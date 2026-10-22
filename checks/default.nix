@@ -27,6 +27,31 @@ let
       ];
 in
 {
+  # Validate the real upstream B61 configure path on the check host, without DVB hardware.
+  recdvb4k-b61-configure = pkgs.stdenv.mkDerivation {
+    pname = "recdvb4k-b61-configure";
+    inherit (public.recdvb4k) version src;
+    nativeBuildInputs = [
+      pkgs.autoreconfHook
+      pkgs.pkg-config
+    ];
+    buildInputs = [ pkgs.libaribb61 ];
+    configureFlags = [ "--enable-b61" ];
+    dontBuild = true;
+    installPhase = ''
+      runHook preInstall
+      grep -q '^#define HAVE_B61 1$' config.h
+      grep -q -- '-laribb61' Makefile
+      # Missing B61 must be a hard configure failure, never a silent feature downgrade.
+      if ./configure --enable-b61 PKG_CONFIG=false > missing-b61.log 2>&1; then
+        cat missing-b61.log
+        exit 1
+      fi
+      grep -q 'libaribb61 is required for B61 support' missing-b61.log
+      touch "$out"
+      runHook postInstall
+    '';
+  };
   # The release archive must report its version without a Git checkout.
   qsvencc-source-version = public.qsvencc.overrideAttrs (old: {
     pname = "qsvencc-source-version";
@@ -57,6 +82,9 @@ in
   });
   dependency-injection =
     assert injectable;
+    assert hasInput public.recdvb4k pkgs.libaribb61;
+    assert hasInput (public.recdvb4k.override { libaribb61 = marker; }) marker;
+    assert !(hasInput (public.recdvb4k.override { libaribb61 = marker; }) pkgs.libaribb61);
     assert public.recisdb.buildNoDefaultFeatures;
     assert public.recisdb.buildFeatures == [ "bg-runtime" ];
     assert !(public.recisdb.src.fetchSubmodules or false);
