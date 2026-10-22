@@ -10,7 +10,7 @@ let
     inputs = self.inputs;
   };
   marker = pkgs.emptyDirectory;
-  recorderInputs = p: map (input: input.outPath) p.nativeBuildInputs;
+  recorderInputs = p: map (input: input.outPath) (p.nativeBuildInputs ++ (p.buildInputs or [ ]));
   hasInput = p: input: builtins.elem input.outPath (recorderInputs p);
   injectable =
     builtins.all
@@ -21,6 +21,7 @@ let
         && !(hasInput (public.${name}.override { libaribb25 = marker; }) pkgs.libaribb25)
       )
       [
+        "recisdb"
         "recpt1"
         "recdvb"
       ];
@@ -56,6 +57,9 @@ in
   });
   dependency-injection =
     assert injectable;
+    assert public.recisdb.buildNoDefaultFeatures;
+    assert public.recisdb.buildFeatures == [ "bg-runtime" ];
+    assert !(public.recisdb.src.fetchSubmodules or false);
     pkgs.runCommand "jodtv-packages-dependency-injection" { } "touch $out";
 }
 // import ./dtv.nix { inherit self nixpkgs pkgs; }

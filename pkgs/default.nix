@@ -20,6 +20,7 @@
   qsvencc = callPackage ./qsvencc/package.nix { };
   recdvb = callPackage ./recdvb/package.nix { };
   recdvb4k = callPackage ./recdvb4k/package.nix { };
+  recisdb = callPackage ./recisdb/package.nix { };
   recpt1 = callPackage ./recpt1/package.nix { };
   tsreadex = callPackage ./tsreadex/package.nix { };
   tsreplace = callPackage ./tsreplace/package.nix { };

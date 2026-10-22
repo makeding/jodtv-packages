@@ -402,13 +402,13 @@ let
     && !(builtins.elem "mirakurun.service" remoteEpgstation.systemd.services.epgstation-epg-update.after);
 
   replacementMirakurun = fakeExe "mirakurun";
-  replacementRecorder = fakeExe "recpt1";
+  replacementRecorder = fakeExe "recisdb";
   packageReplacement = configOf {
     dtv.mirakurun = {
       enable = true;
       package = replacementMirakurun;
     };
-    dtv.packages.recpt1 = replacementRecorder;
+    dtv.packages.recisdb = replacementRecorder;
     dtv.tuners = [
       {
         name = "override";
@@ -423,6 +423,39 @@ let
     && hasPackage replacementRecorder packageReplacement.systemd.services.mirakurun.path
     && map (t: t.name) packageReplacement.services.mirakurun.tunerSettings == [ "override" ]
     && map (t: t.types) packageReplacement.services.mirakurun.tunerSettings == [ [ "GR" ] ];
+
+  captureRecorder = pkgs.writeShellScriptBin "recisdb" ''
+    printf '%s\n' "$@"
+  '';
+  captureConfig = configOf {
+    # Exercise generated scripts on the check host, without tuner hardware.
+    nixpkgs.overlays = [ (_final: _prev: { inherit (pkgs) writeShellScript; }) ];
+    dtv.packages.recisdb = captureRecorder;
+    dtv.mirakurun.enable = true;
+    dtv.hirakud.enable = true;
+    dtv.tuners = [
+      { driver = "pt3"; }
+      {
+        name = "raw";
+        driver = "px4";
+        mode = [ "GR" ];
+        device = "/dev/px4 video0";
+        b25 = false;
+        strip = false;
+        args = [
+          "--lnb"
+          "15v"
+        ];
+      }
+    ];
+  };
+  runCapture =
+    name: channel:
+    lib.escapeShellArgs (
+      map (arg: if arg == "<channel>" then channel else arg) (
+        builtins.head captureConfig.services.hirakud.settings.modes.${name}.record
+      )
+    );
 
   helperContract =
     self.lib.mkHirakuTuners {
@@ -567,6 +600,19 @@ let
     && require "invalid inventories" invalidContract;
 in
 {
+  recisdb-capture = pkgs.runCommand "recisdb-capture" { } ''
+    test "$(${runCapture "PT3-T1" "13"})" = "$(printf '%s\n' tune --channel T13 --device /dev/pt3video2 -)"
+    test "$(${runCapture "PT3-T1" "T27"})" = "$(printf '%s\n' tune --channel T27 --device /dev/pt3video2 -)"
+    test "$(${runCapture "PT3-T1" "C13"})" = "$(printf '%s\n' tune --channel C13 --device /dev/pt3video2 -)"
+    test "$(${runCapture "PT3-S1" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/pt3video0 -)"
+    test "$(${runCapture "PT3-S1" "CS2"})" = "$(printf '%s\n' tune --channel CS2 --device /dev/pt3video0 -)"
+    test "$(${runCapture "raw" "13"})" = "$(printf '%s\n' tune --channel T13 --device '/dev/px4 video0' --no-strip --no-decode --lnb 15v -)"
+    test "$(${
+      lib.replaceStrings [ "<channel>" ] [ "13" ]
+        (builtins.head captureConfig.services.mirakurun.tunerSettings).command
+    })" = "$(printf '%s\n' tune --channel T13 --device /dev/pt3video2 -)"
+    touch $out
+  '';
   dtv =
     assert contract;
     pkgs.runCommand "jodtv-packages-dtv" { } "touch $out";

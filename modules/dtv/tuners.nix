@@ -137,49 +137,59 @@ let
         "px4"
       ]
     then
-      cfg.packages.recpt1
+      cfg.packages.recisdb
     else
       cfg.packages.recdvb;
+  # Normalize legacy terrestrial channel numbers at the shared capture boundary.
+  recisdbCommand =
+    t:
+    pkgs.writeShellScript "dtv-recisdb" ''
+      channel="$1"
+      shift
+      case "$channel" in
+        *[!0-9]*|"") ;;
+        *) channel="T$channel" ;;
+      esac
+      exec ${lib.getExe' cfg.packages.recisdb "recisdb"} tune --channel "$channel" "$@"
+    '';
   localCommand =
     t: fourK:
-    [
-      (
-        if fourK then
-          lib.getExe' cfg.packages.recdvb4k "recdvb4k"
-        else
-          lib.getExe' (recorder t) (
-            if
-              builtins.elem t.driver [
-                "pt3"
-                "px4"
-              ]
-            then
-              "recpt1"
-            else
-              "recdvb"
-          )
-      )
-      (
-        if
-          builtins.elem t.driver [
-            "pt3"
-            "px4"
-          ]
-        then
-          "--device"
-        else
-          "--dev"
-      )
-      (if t.device != null then t.device else "")
-    ]
-    ++ lib.optional t.strip "--strip"
-    ++ lib.optional (if fourK then t.b61 else t.b25) (if fourK then "--b61" else "--b25")
-    ++ (if fourK then t.argsBS4K else t.args)
-    ++ [
-      "<channel>"
-      "-"
-      "-"
-    ];
+    if
+      !fourK
+      && builtins.elem t.driver [
+        "pt3"
+        "px4"
+      ]
+    then
+      [
+        (toString (recisdbCommand t))
+        "<channel>"
+        "--device"
+        (if t.device != null then t.device else "")
+      ]
+      ++ lib.optional (!t.strip) "--no-strip"
+      ++ lib.optional (!t.b25) "--no-decode"
+      ++ t.args
+      ++ [ "-" ]
+    else
+      [
+        (
+          if fourK then
+            lib.getExe' cfg.packages.recdvb4k "recdvb4k"
+          else
+            lib.getExe' cfg.packages.recdvb "recdvb"
+        )
+        "--dev"
+        (if t.device != null then t.device else "")
+      ]
+      ++ lib.optional t.strip "--strip"
+      ++ lib.optional (if fourK then t.b61 else t.b25) (if fourK then "--b61" else "--b25")
+      ++ (if fourK then t.argsBS4K else t.args)
+      ++ [
+        "<channel>"
+        "-"
+        "-"
+      ];
   argv =
     t: fourK:
     if fourK && t.commandBS4K != [ ] then
@@ -301,7 +311,7 @@ let
 in
 {
   options.dtv = {
-    packages = lib.genAttrs [ "recpt1" "recdvb" "recdvb4k" "hiraku" "dantto4k" ] (
+    packages = lib.genAttrs [ "recisdb" "recdvb" "recdvb4k" "hiraku" "dantto4k" ] (
       name: lib.mkPackageOption pkgs name { }
     );
     tuners = mkOption {
@@ -345,7 +355,7 @@ in
               device = mkOption {
                 type = types.nullOr nonEmpty;
                 default = null;
-                description = "Device path for recpt1 or adapter number for recdvb.";
+                description = "Device path for recisdb or adapter number for recdvb.";
               };
               b25 = mkOption {
                 type = types.bool;

@@ -59,6 +59,7 @@ replace that dependency with its own package without changing this repository:
 ```nix
 final: prev: {
   recpt1 = prev.recpt1.override { libaribb25 = final.myAribLibrary; };
+  recisdb = prev.recisdb.override { libaribb25 = final.myAribLibrary; };
   recdvb = prev.recdvb.override { libaribb25 = final.myAribLibrary; };
 }
 ```
@@ -72,7 +73,7 @@ belong to the consumer repository and must never be imported here.
 ```sh
 nix build --no-link .#checks.x86_64-linux.dependency-injection \
   .#checks.x86_64-linux.dtv
-nix build --no-link .#recpt1 .#recdvb
+nix build --no-link .#recisdb .#recpt1 .#recdvb
 ```
 
 Checks cover recorder dependency injection and NixOS
@@ -139,3 +140,25 @@ exist. Changes saved by HonomiTV survive restarts and NixOS rebuilds. After the
 first start, edit the application configuration directly. Nix still manages
 firewall ports, directory access and service dependencies; keep their settings
 aligned if you change ports or storage paths in the application.
+
+## recisdb capture contract
+
+PT3/PX4 capture uses recisdb 1.3.0. `dtv.packages.recisdb` replaces the former
+`dtv.packages.recpt1` option. Custom `args` must use recisdb options (for example,
+`--lnb 15v`); explicit `command` values remain caller-owned.
+The generated adapter accepts existing numeric terrestrial channels and prefixes
+`T`; BS/CS/C-prefixed channels pass through unchanged. Both Mirakurun and Hirakud
+use this adapter. Decoding and stripping stay enabled by default; `b25 = false`
+and `strip = false` generate `--no-decode` and `--no-strip` respectively.
+DVB and BS4K capture continue to use recdvb and recdvb4k.
+
+The package disables upstream default features and enables only `bg-runtime`.
+It requires the injected external `libaribb25` through pkg-config, with no bundled
+fallback. The library must provide the upstream B25 ABI (including SIMD support).
+The upstream prioritized-card-reader extension is disabled; `--card` selection
+is therefore unavailable. Private library implementations remain consumer-owned.
+
+`recpt1` remains available as a standalone package and overlay attribute for DIY
+setups, including external `libaribb25` injection. To use it in a tuner, supply
+an explicit `dtv.tuners[].command` with recpt1 arguments and add `pkgs.recpt1`
+to that entry's `packages`. Generated PT3/PX4 commands use recisdb by default.

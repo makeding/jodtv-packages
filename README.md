@@ -61,6 +61,7 @@ PSI/SI ツール、tsreadex、tsreplace、FFmpeg パッチセットを公開し�
 ```nix
 final: prev: {
   recpt1 = prev.recpt1.override { libaribb25 = final.myAribLibrary; };
+  recisdb = prev.recisdb.override { libaribb25 = final.myAribLibrary; };
   recdvb = prev.recdvb.override { libaribb25 = final.myAribLibrary; };
 }
 ```
@@ -75,7 +76,7 @@ final: prev: {
 ```sh
 nix build --no-link .#checks.x86_64-linux.dependency-injection \
   .#checks.x86_64-linux.dtv
-nix build --no-link .#recpt1 .#recdvb
+nix build --no-link .#recisdb .#recpt1 .#recdvb
 ```
 
 checks では録画ツールの依存パッケージの差し替えと NixOS モジュールの組み合わせを
@@ -147,3 +148,21 @@ Hiraku の `listen` はアプリケーション本来の `address:port` 形式�
 保持されます。初回起動後はアプリケーション側で設定を編集してください。
 ファイアウォール、ディレクトリーへのアクセス、サービス間の依存関係は引き続き
 Nix で管理するため、アプリ側でポートや保存先を変える際は Nix 側も合わせてください。
+
+## recisdb への移行
+
+PT3/PX4 は recisdb 1.3.0 を使用します。`dtv.packages.recpt1` は
+`dtv.packages.recisdb` に変更してください。`args` は recisdb の構文
+（例: `--lnb 15v`）に更新してください。明示的な `command` は自動変換しません。
+Mirakurun/Hirakud 共通のアダプターが地上波の数値チャンネルに `T` を付け、
+BS/CS/C 形式はそのまま渡します。`b25 = false` は `--no-decode`、
+`strip = false` は `--no-strip` になります。DVB/BS4K は従来のツールを使います。
+
+外部 `libaribb25` を必須とし、内蔵ライブラリへのフォールバックはありません。
+差し替え先には SIMD を含む上流 B25 ABI が必要です。既定 feature を無効化し、
+`bg-runtime` のみ有効にするため、独自のカードリーダー優先機能（`--card`）は使えません。
+
+DIY 用に `recpt1` の独立パッケージと overlay 属性を引き続き公開します。
+外部 `libaribb25` の差し替えも可能です。チューナーで使う場合は
+`dtv.tuners[].command` に recpt1 の引数を明示し、その項目の `packages` に
+`pkgs.recpt1` を追加してください。PT3/PX4 の既定コマンドは recisdb です。
