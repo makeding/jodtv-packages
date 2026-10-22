@@ -1,6 +1,5 @@
 {
   lib,
-  fetchpatch,
   fetchFromGitHub,
   buildNpmPackage,
   installShellFiles,
@@ -14,12 +13,12 @@
 
 buildNpmPackage rec {
   pname = "epgstation";
-  version = "2.10.1-huggy-20261013";
+  version = "2.10.1-unstable-2026-10-22";
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "EPGStation";
-    rev = "41b171056f3091b2868887d45f363bacb4e5aef9";
-    sha256 = "sha256-PIk3ie4shw3s62f9Rc+K+PjBI0b7Aq9kontgCPQEous=";
+    rev = "30c578bd1cebd436e9be553af6371dd2b0c4c9ab";
+    sha256 = "sha256-GFeYb2g4ECyUR7W+mIE58Jf//cAgm+MV6cS31LB5CRw=";
   };
 
   nodejs = nodejs_24;
@@ -40,19 +39,27 @@ buildNpmPackage rec {
     inherit
       version
       src
-      installPhase
       meta
       nodejs
       ;
-    patches = [ ./fix-client-eslint-config.patch ];
-    npmDepsHash = "sha256-EFjrA25nKFDRVWbJOQRjE5FUvai6mEUA62I10MK8Swg=";
-    npmFlags = [ "--legacy-peer-deps" ];
-    npmRootPath = "";
+    npmDepsHash = "sha256-NPVpmcunFihkDn7qP+wdvKJuGrF4c3C9ldsTprh32wM=";
     makeCacheWritable = true;
     sourceRoot = "${src.name}/client";
 
-    NODE_OPTIONS = "--openssl-legacy-provider";
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out/dist
+      cp -r dist/. $out/dist/
+      runHook postInstall
+    '';
+    doInstallCheck = true;
+    installCheckPhase = ''
+      test -s $out/dist/index.html
+      test -d $out/dist/assets
+    '';
   };
+
+  passthru = { inherit clientDir; };
 
   postBuild = ''
     rm -rf client
