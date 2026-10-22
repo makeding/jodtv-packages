@@ -10,6 +10,20 @@ spec.loader.exec_module(bump)
 
 
 class BumpTests(unittest.TestCase):
+    def test_native_apple_silicon_system(self):
+        with patch.object(bump.platform, "machine", return_value="arm64"), patch.object(bump.platform, "system", return_value="Darwin"):
+            self.assertEqual(bump.native_system(), "aarch64-darwin")
+
+    def test_epgstation_version_comes_from_fetched_source(self):
+        with patch.object(bump.subprocess, "run") as run, patch.object(Path, "read_text", side_effect=[
+            '{"version":"3.0.0-beta2"}',
+            'version = "0-unstable-2026-10-22";',
+        ]), patch.object(Path, "write_text") as write:
+            run.return_value.stdout = "/nix/store/source\n"
+            bump.refresh_epgstation_version("aarch64-darwin")
+            write.assert_called_once_with('version = "3.0.0-beta2-unstable-2026-10-22";')
+            self.assertIn(".#packages.aarch64-darwin.epgstation-h.src", run.call_args.args[0])
+
     def test_dependency_caches_and_release_policy(self):
         args = argparse.Namespace(version=None, system="x86_64-linux", build=False)
         cmds = list(bump.commands(["honomitv", "epgstation-h", "recisdb", "qsvencc"], args))

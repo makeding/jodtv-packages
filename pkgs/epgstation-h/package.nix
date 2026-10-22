@@ -17,8 +17,8 @@ buildNpmPackage rec {
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "EPGStation";
-    rev = "85712b6a79efb345d52f6b35e2e06cd55bff5e6c";
-    sha256 = "sha256-ly7xcUNv2CqKfuyq39dOrFwwzp1y2rfakamsJMp6SCM=";
+    rev = "ab135b8a5487c3b056b2ee6d9bc86623d58b1c5d";
+    sha256 = "sha256-nw7rXfhBP1df6vu9psRvzSOkJpP1a76OynxHkcBOQTk=";
   };
 
   nodejs = nodejs_24;

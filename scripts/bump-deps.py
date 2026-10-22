@@ -2,6 +2,8 @@
 """Update this flake's packaged sources and dependency hashes with nix-update."""
 import argparse
 import os
+import json
+import platform
 from pathlib import Path
 import re
 import shlex
@@ -15,6 +17,30 @@ RELEASES = {"mirakc", "mirakc-arib", "intel-media-sdk-h", "qsvencc", "psisimux",
 SUBPACKAGES = {"honomitv": "frontend", "epgstation-h": "clientDir"}
 ALIASES = {"konomitv": "honomitv", "epgstation": "epgstation-h"}
 EXCLUDED = {"konomitv", "ffmpeg-libaribtlv"}
+
+
+def native_system():
+    machine = {"arm64": "aarch64", "AMD64": "x86_64"}.get(platform.machine(), platform.machine())
+    return f"{machine}-{platform.system().lower()}"
+
+
+def refresh_epgstation_version(system):
+    # Forks without release tags are reported as version 0 by nix-update.
+    # Read the actual application version from the freshly fetched source.
+    result = subprocess.run(
+        ["nix", "build", "--no-link", "--print-out-paths",
+         f".#packages.{system}.epgstation-h.src"],
+        cwd=ROOT, check=True, capture_output=True, text=True,
+    )
+    source = Path(result.stdout.strip())
+    version = json.loads((source / "package.json").read_text())["version"]
+    if not re.fullmatch(r"[0-9A-Za-z.+-]+", version):
+        raise ValueError("Invalid EPGStation package version")
+    package = ROOT / "pkgs/epgstation-h/package.nix"
+    text = package.read_text()
+    text = re.sub(r'version = "[^"\n]+(-unstable-\d{4}-\d{2}-\d{2})";',
+                  lambda match: f'version = "{version}{match[1]}";', text, count=1)
+    package.write_text(text)
 
 
 def packages():
@@ -43,7 +69,7 @@ def main(argv=None):
     parser.add_argument("--list", action="store_true", help="list supported packages")
     parser.add_argument("--dry-run", action="store_true", help="print commands without network access or writes")
     parser.add_argument("--version", help="nix-update version: stable, branch, branch=NAME, skip, or explicit version")
-    parser.add_argument("--system", default="x86_64-linux", help="target Nix system (default: x86_64-linux)")
+    parser.add_argument("--system", default=native_system(), help="evaluation/build system (default: native host; foreign systems require a matching builder)")
     parser.add_argument("--build", action="store_true", help="also build updated packages; needs a matching builder")
     args = parser.parse_args(argv)
     available = packages()
@@ -66,7 +92,7 @@ def main(argv=None):
         # Use an ephemeral Nix environment, preserving arguments as individual words.
         command = shlex.join([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])
         os.execvp("nix-shell", ["nix-shell", "-p", "nix-update", "--run", command])
-    for command in commands(names, args):
+    for name, command in zip(names, commands(names, args)):
         print("+ " + shlex.join(command), flush=True)
         if args.dry_run:
             continue
@@ -74,6 +100,8 @@ def main(argv=None):
         if result.returncode:
             print("Update failed; inspect git diff before retrying. Partial edits are preserved.", file=sys.stderr)
             return result.returncode
+        if name == "epgstation-h" and (args.version is None or args.version.startswith("branch")):
+            refresh_epgstation_version(args.system)
     return 0
 
 

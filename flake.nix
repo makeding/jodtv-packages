@@ -50,6 +50,7 @@
             inherit inputs;
           };
           darwin = [
+            "epgstation-h"
             "hiraku"
             "libaribb61"
             "libaribtlv"
