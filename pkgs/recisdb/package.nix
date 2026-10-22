@@ -4,7 +4,6 @@
   rustPlatform,
   fetchFromGitHub,
   pkg-config,
-  pcsclite,
   libaribb61,
   v4l-utils,
   libaribb25,
@@ -30,7 +29,6 @@ rustPlatform.buildRustPackage {
     rustPlatform.bindgenHook
   ];
   buildInputs = [
-    pcsclite
     libaribb25
     libaribb61
   ]
@@ -41,11 +39,10 @@ rustPlatform.buildRustPackage {
     })
   ];
 
-  # Both decoders must use the caller's libraries, with no bundled fallback.
+
   postPatch = ''
     cat > b25-sys/build.rs <<'EOF'
     fn main() {
-        pkg_config::Config::new().probe("libpcsclite").expect("external PC/SC is required");
         pkg_config::Config::new().probe("libaribb25").expect("external libaribb25 is required");
     }
     EOF

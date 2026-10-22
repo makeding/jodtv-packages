@@ -94,6 +94,7 @@ in
   });
   dependency-injection =
     assert injectable;
+    assert !(hasInput public.recisdb pkgs.pcsclite);
     assert hasInput public.recisdb pkgs.libaribb61;
     assert hasInput (public.recisdb.override { libaribb61 = marker; }) marker;
     assert !(hasInput (public.recisdb.override { libaribb61 = marker; }) pkgs.libaribb61);
