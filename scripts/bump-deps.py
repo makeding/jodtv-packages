@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Update this flake's packaged sources and dependency hashes with nix-update."""
 import argparse
-import os
 import json
+import os
 import platform
 from pathlib import Path
 import re
@@ -30,7 +30,7 @@ def refresh_epgstation_version(system):
     result = subprocess.run(
         ["nix", "build", "--no-link", "--print-out-paths",
          f".#packages.{system}.epgstation-h.src"],
-        cwd=ROOT, check=True, capture_output=True, text=True,
+        cwd=ROOT, check=True, stdout=subprocess.PIPE, text=True,
     )
     source = Path(result.stdout.strip())
     version = json.loads((source / "package.json").read_text())["version"]
