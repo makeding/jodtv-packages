@@ -135,6 +135,7 @@ let
       builtins.elem t.driver [
         "pt3"
         "px4"
+        "tbs6812"
       ]
     then
       cfg.packages.recisdb
@@ -155,21 +156,24 @@ let
   localCommand =
     t: fourK:
     if
-      !fourK
-      && builtins.elem t.driver [
+      builtins.elem t.driver [
         "pt3"
         "px4"
+        "tbs6812"
       ]
     then
       [
         (toString (recisdbCommand t))
         "<channel>"
         "--device"
-        (if t.device != null then t.device else "")
+        (if t.driver == "tbs6812" && t.device != null then
+          if lib.hasPrefix "/dev/" t.device then t.device else "/dev/dvb/adapter${t.device}/frontend0"
+        else if t.device != null then t.device else "")
       ]
+      ++ lib.optional (fourK && t.b61) "--b61"
       ++ lib.optional (!t.strip) "--no-strip"
-      ++ lib.optional (!t.b25) "--no-decode"
-      ++ t.args
+      ++ lib.optional (!(if fourK then t.b61 else t.b25)) "--no-decode"
+      ++ (if fourK then t.argsBS4K else t.args)
       ++ [ "-" ]
     else
       [
@@ -258,7 +262,6 @@ let
     t:
     t.packages
     ++ lib.optional (isLocal t) (recorder t)
-    ++ lib.optional (t.driver == "tbs6812" && has4k t) cfg.packages.recdvb4k
     ++ lib.optional (t.driver == "hiraku") cfg.packages.hiraku
     ++ lib.optional (t.driver != "remote" && has4k t && t.mmtsDecoder) cfg.packages.dantto4k;
   modes = lib.concatMap (
@@ -465,6 +468,13 @@ in
   config = mkMerge [
     {
       assertions = [
+        {
+          assertion = builtins.all (t:
+            !t.enable || t.driver != "tbs6812" || t.mode == null ||
+            !(builtins.elem "GR" t.mode && builtins.any (m: builtins.elem m t.mode) [ "BS" "CS" "BS4K" ])
+          ) cfg.tuners;
+          message = "TBS6812 tuner modes are exclusive: GR cannot be combined with BS/CS/BS4K.";
+        }
         {
           assertion = builtins.all (t: !t.enable || t.driver == "pt3" || t.mode != null) cfg.tuners;
           message = "Non-PT3 tuners require explicit mode; use [] for hardware only.";

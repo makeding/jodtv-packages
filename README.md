@@ -151,19 +151,20 @@ Nix で管理するため、アプリ側でポートや保存先を変える際�
 
 ## recisdb への移行
 
-PT3/PX4 は recisdb 1.3.0（`3bdd062`）を使用します。`dtv.packages.recpt1` は
+PT3/PX4/TBS6812 は recisdb 1.3.0（`83e8068`）を使用します。`dtv.packages.recpt1` は
 `dtv.packages.recisdb` に変更してください。`args` は recisdb の構文
 （例: `--lnb 15v`）に更新してください。明示的な `command` は自動変換しません。
 Mirakurun/Hirakud 共通のアダプターが地上波の数値チャンネルに `T` を付け、
 BS/CS/C 形式はそのまま渡します。`b25 = false` は `--no-decode`、
-`strip = false` は `--no-strip` になります。DVB/BS4K は従来のツールを使います。
+`strip = false` は `--no-strip` になります。TBS6812 の BS/CS/BS4K も recisdb を使います。
+数値 device は `/dev/dvb/adapterN/frontend0` に変換し、BS4K は `--b61` と
+`argsBS4K`（`--cas-proxy` など）を渡します。他の DVB ドライバーは従来どおりです。
 
 外部 `libaribb25` と `libaribb61` を必須とし、内蔵ライブラリへのフォールバックはありません。
 差し替え先には SIMD を含む上流 B25 ABI が必要です。既定 feature を無効化し、
 `bg-runtime`、`b61` と Linux の `dvb` を有効にします。
 `recisdb.override { libaribb61 = myB61Library; }` で B61 を独立して差し替えられます。
-`decode --b61` と実験的な DVB ISDB-S3 選局に対応します。生成済みチューナーの
-コマンド形式やデコーダーの既定値は変更しません。
+`decode --b61` と実験的な DVB ISDB-S3 選局に対応します。デコーダーの既定値は変更しません。
 独自のカードリーダー優先機能（`--card`）は使えません。
 
 DIY 用に `recpt1` の独立パッケージと overlay 属性を引き続き公開します。
@@ -182,3 +183,6 @@ Linux/macOS 向けの独立した MMT/TLV ACAS デスクランブルライブラ
 通常の `recdvb` は独立した B25 専用ビルドです。上流の core/C API テストと
 インストール済みライブラリへの C API リンクを検証します。カード/プロキシや
 実放送のデスクランブルは別途実機での検証が必要です。
+
+TBS6812 の各物理チューナーは GR と BS/CS/BS4K を排他的に設定します。
+GR と衛星モードの混在は評価時に拒否します。2 つのチューナーは個別に選択できます。

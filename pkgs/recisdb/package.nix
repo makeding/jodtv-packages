@@ -15,8 +15,8 @@ rustPlatform.buildRustPackage {
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "recisdb-rs";
-    rev = "3bdd062b132919af2e35d3e83836fd5782bc142d";
-    hash = "sha256-fEoVD39UQOOY/IX92Pxt8L9R+jXkEtfYYggaaTwB/bE=";
+    rev = "83e8068eae3db0c4f62cde080870a03323e56db6";
+    hash = "sha256-N8mgDbsYvcXssiurW9nlNgscbVRf4GdXvpg7/ZJiilA=";
   };
   cargoHash = "sha256-pMBiqzAJ/Dqg3AnUV8O7D1ItQo/sBSXerlocpcop3Vg=";
   buildNoDefaultFeatures = true;

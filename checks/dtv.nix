@@ -436,6 +436,15 @@ let
     dtv.tuners = [
       { driver = "pt3"; }
       {
+        name = "PT4K";
+        driver = "tbs6812";
+        mode = [ "BS" "CS" "BS4K" ];
+        device = "0";
+        serve.mode = "PT4K";
+        serve.modeBS4K = "PT4K4K";
+        argsBS4K = [ "--cas-proxy" "192.168.6.253:24000" ];
+      }
+      {
         name = "raw";
         driver = "px4";
         mode = [ "GR" ];
@@ -506,6 +515,24 @@ let
           };
         }
       ];
+
+  pt4kSplit = configOf {
+    dtv.mirakurun.enable = true;
+    dtv.tuners = [
+      { name = "PT4K-T"; driver = "tbs6812"; device = "0"; mode = [ "GR" ]; }
+      { name = "PT4K-S"; driver = "tbs6812"; device = "1"; mode = [ "BS" "CS" "BS4K" ]; }
+    ];
+  };
+  pt4kModesContract =
+    builtins.all (a: a.assertion || a.message != "TBS6812 tuner modes are exclusive: GR cannot be combined with BS/CS/BS4K.") pt4kSplit.assertions
+    && (builtins.elemAt pt4kSplit.services.mirakurun.tunerSettings 0).types == [ "GR" ]
+    && !(builtins.hasAttr "commandBS4K" (builtins.elemAt pt4kSplit.services.mirakurun.tunerSettings 0))
+    && (builtins.elemAt pt4kSplit.services.mirakurun.tunerSettings 1).types == [ "BS" "CS" "BS4K" ]
+    && builtins.all (satellite:
+      assertionFails "TBS6812 tuner modes are exclusive: GR cannot be combined with BS/CS/BS4K." {
+        dtv.tuners = [{ driver = "tbs6812"; device = "0"; mode = [ "GR" satellite ]; }];
+      }
+    ) [ "BS" "CS" "BS4K" ];
 
   invalidContract =
     assertionFails "dtv.tuners names must be unique." {
@@ -597,10 +624,13 @@ let
     && require "remote EPGStation" remoteEpgstationContract
     && require "package replacement" packageReplacementContract
     && require "export helpers" helperContract
-    && require "invalid inventories" invalidContract;
+    && require "invalid inventories" invalidContract
+    && require "PT4K exclusive modes" pt4kModesContract;
 in
 {
   recisdb-capture = pkgs.runCommand "recisdb-capture" { } ''
+    test "$(${runCapture "PT4K" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/dvb/adapter0/frontend0 -)"
+    test "$(${runCapture "PT4K4K" "BS17_0"})" = "$(printf '%s\n' tune --channel BS17_0 --device /dev/dvb/adapter0/frontend0 --b61 --cas-proxy 192.168.6.253:24000 -)"
     test "$(${runCapture "PT3-T1" "13"})" = "$(printf '%s\n' tune --channel T13 --device /dev/pt3video2 -)"
     test "$(${runCapture "PT3-T1" "T27"})" = "$(printf '%s\n' tune --channel T27 --device /dev/pt3video2 -)"
     test "$(${runCapture "PT3-T1" "C13"})" = "$(printf '%s\n' tune --channel C13 --device /dev/pt3video2 -)"

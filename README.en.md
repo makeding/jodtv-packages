@@ -143,21 +143,23 @@ aligned if you change ports or storage paths in the application.
 
 ## recisdb capture contract
 
-PT3/PX4 capture uses recisdb 1.3.0 (`3bdd062`). `dtv.packages.recisdb` replaces the former
+PT3/PX4/TBS6812 capture uses recisdb 1.3.0 (`83e8068`). `dtv.packages.recisdb` replaces the former
 `dtv.packages.recpt1` option. Custom `args` must use recisdb options (for example,
 `--lnb 15v`); explicit `command` values remain caller-owned.
 The generated adapter accepts existing numeric terrestrial channels and prefixes
 `T`; BS/CS/C-prefixed channels pass through unchanged. Both Mirakurun and Hirakud
 use this adapter. Decoding and stripping stay enabled by default; `b25 = false`
 and `strip = false` generate `--no-decode` and `--no-strip` respectively.
-DVB and BS4K capture continue to use recdvb and recdvb4k.
+TBS6812 BS/CS/BS4K capture uses recisdb. Numeric device IDs map to
+`/dev/dvb/adapterN/frontend0`; BS4K adds `--b61` and passes `argsBS4K`
+(including `--cas-proxy`). Other DVB drivers continue to use recdvb.
 
 The package disables upstream default features and enables `bg-runtime`, `b61`
 and Linux `dvb` support. Both `libaribb25` and `libaribb61` are package arguments
 resolved through pkg-config, with no bundled fallback. The B25 library must provide
 the upstream ABI (including SIMD support). `recisdb.override { libaribb61 = myB61Library; }`
 replaces B61 independently. The CLI provides `decode --b61` and experimental DVB
-ISDB-S3 tuning; existing generated tuner commands and decoder defaults stay unchanged.
+ISDB-S3 tuning; decoder defaults stay unchanged.
 The upstream prioritized-card-reader extension is disabled; `--card` selection
 is therefore unavailable. Private library implementations remain consumer-owned.
 
@@ -184,3 +186,7 @@ final: prev: {
 The ordinary `recdvb` package remains a separate B25-only build.
 The build runs the upstream core/C API tests and an installed C API consumer;
 card/proxy and real broadcast descrambling require separate runtime verification.
+
+For each TBS6812 physical tuner, `mode` must select either `[ "GR" ]` or a
+subset of `[ "BS" "CS" "BS4K" ]`. Mixing GR with satellite modes is rejected.
+The two tuners can select different modes independently.
