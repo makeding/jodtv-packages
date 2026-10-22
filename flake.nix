@@ -51,6 +51,7 @@
           };
           darwin = [
             "hiraku"
+            "libaribb61"
             "libaribtlv"
             "psisiarc"
             "psisimux"

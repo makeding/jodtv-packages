@@ -45,7 +45,7 @@ a different kernel.
 
 `packages.x86_64-linux` exposes the full package set. The aarch64-linux output
 omits HonomiTV/KonomiTV and Intel encoding packages until their ARM packaging is
-validated. The aarch64-darwin output contains Hiraku, libaribtlv, PSI/SI tools,
+validated. The aarch64-darwin output contains Hiraku, libaribb61, libaribtlv, PSI/SI tools,
 tsreadex, tsreplace and the FFmpeg patchset. Output lists are explicit to keep
 source-dependent packages from forcing evaluation of unrelated tools.
 An output's presence is not a claim that it was built on that platform. HonomiTV and the FFmpeg patchset require source-dependent evaluation;
@@ -162,3 +162,13 @@ is therefore unavailable. Private library implementations remain consumer-owned.
 setups, including external `libaribb25` injection. To use it in a tuner, supply
 an explicit `dtv.tuners[].command` with recpt1 arguments and add `pkgs.recpt1`
 to that entry's `packages`. Generated PT3/PX4 commands use recisdb by default.
+
+## libaribb61
+
+`libaribb61` is an independent streaming MMT/TLV ACAS descrambler library,
+exported through the package set and overlay on Linux and macOS. It installs
+`aribb61/arib_std_b61.h`, the shared library and `libaribb61.pc` for pkg-config
+consumers. Build it with `nix build .#libaribb61`. This package does not change
+any recorder's decoder selection. Its C API resembles B25 but is not ABI compatible.
+The build runs the upstream core/C API tests and an installed C API consumer;
+card/proxy and real broadcast descrambling require separate runtime verification.

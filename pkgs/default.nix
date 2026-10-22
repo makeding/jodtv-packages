@@ -11,6 +11,7 @@
   intel-media-sdk-h = callPackage ./intel-media-sdk-h/package.nix { };
   konomitv = callPackage ./konomitv/package.nix { };
   libaribb25 = callPackage ./libaribb25/package.nix { };
+  libaribb61 = callPackage ./libaribb61/package.nix { };
   libaribtlv = callPackage ./libaribtlv/package.nix { };
   librw5100 = callPackage ./librw5100/package.nix { };
   mirakurun = callPackage ./mirakurun/package.nix { };

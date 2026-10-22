@@ -46,7 +46,7 @@ PT3、上流版 PX4、Siano、TBS6812 のドライバーを含みます。実験
 
 `packages.x86_64-linux` はすべてのパッケージを公開します。`aarch64-linux` では
 ARM 向けのパッケージングを検証するまで、HonomiTV/KonomiTV と Intel 向け
-エンコード関連パッケージを除外しています。`aarch64-darwin` では Hiraku、libaribtlv、
+エンコード関連パッケージを除外しています。`aarch64-darwin` では Hiraku、libaribb61、libaribtlv、
 PSI/SI ツール、tsreadex、tsreplace、FFmpeg パッチセットを公開します。
 ソースの取得を伴うパッケージが無関係なツールの評価まで要求しないよう、公開する一覧を
 明示しています。出力が存在することは、そのプラットフォームでビルド済みであることを
@@ -166,3 +166,13 @@ DIY 用に `recpt1` の独立パッケージと overlay 属性を引き続き公
 外部 `libaribb25` の差し替えも可能です。チューナーで使う場合は
 `dtv.tuners[].command` に recpt1 の引数を明示し、その項目の `packages` に
 `pkgs.recpt1` を追加してください。PT3/PX4 の既定コマンドは recisdb です。
+
+## libaribb61
+
+Linux/macOS 向けの独立した MMT/TLV ACAS デスクランブルライブラリです。
+パッケージ一覧と overlay で公開し、`nix build .#libaribb61` でビルドできます。
+ヘッダー `aribb61/arib_std_b61.h`、共有ライブラリ、pkg-config 用の
+`libaribb61.pc` をインストールします。録画ツールのデコーダー選択は変更しません。
+C API は B25 に似ていますが ABI 互換ではありません。上流の core/C API テストと
+インストール済みライブラリへの C API リンクを検証します。カード/プロキシや
+実放送のデスクランブルは別途実機での検証が必要です。
