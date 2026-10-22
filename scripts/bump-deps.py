@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # These track release tags; other packages track their default branch.
 RELEASES = {"intel-media-sdk-h", "qsvencc", "psisimux", "tsreadex"}
 SUBPACKAGES = {"honomitv": "frontend", "epgstation-h": "clientDir"}
+ALIASES = {"konomitv": "honomitv", "epgstation": "epgstation-h"}
 EXCLUDED = {"konomitv", "ffmpeg-libaribtlv"}
 
 
@@ -37,7 +38,7 @@ def commands(names, args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("packages", nargs="*", help="package names (konomitv aliases honomitv)")
+    parser.add_argument("packages", nargs="*", help="package names (also accepts konomitv and epgstation aliases)")
     parser.add_argument("--all", action="store_true", help="update all supported packages serially")
     parser.add_argument("--list", action="store_true", help="list supported packages")
     parser.add_argument("--dry-run", action="store_true", help="print commands without network access or writes")
@@ -51,7 +52,7 @@ def main(argv=None):
         return 0
     if args.all and args.packages:
         parser.error("use either package names or --all")
-    names = list(dict.fromkeys("honomitv" if p == "konomitv" else p for p in args.packages))
+    names = list(dict.fromkeys(ALIASES.get(p, p) for p in args.packages))
     if args.all:
         names = available
     if not names:

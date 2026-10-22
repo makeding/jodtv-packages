@@ -104,7 +104,8 @@ Git リポジトリが公開されていることだけでは、利用許諾に�
 `hiraku` はリモートの Hiraku エージェント、`remote` はリモートの Mirakurun に接続します。
 リモートの受信元を指定しても、ローカルのドライバーやエージェントは有効になりません。
 各項目では `enable`、追加の `packages`、Mirakurun 固有の `settings` を設定できます。
-ローカル受信では `b25`、`b61`、`strip`、`args`、`argsBS4K` などを指定できます。
+ローカル受信では `b25`、`b61`、`lnb`、`strip`、`args`、`argsBS4K` などを指定できます。
+`lnb = true` は BS/CS/BS4K のローカル受信で 15V 給電を要求します（recisdb: `--lnb 15v`、recdvb: `--lnb 15`）。既定値は `false`（電圧未指定）です。GR 専用チューナーと明示的な command 指定には適用しません。
 `dtv.packages` で録画ツール、Hiraku、変換ツールを差し替えられ、利用側の overlay も反映されます。
 
 ローカルチューナーを Hiraku 経由で公開するには `dtv.hirakud.enable` を有効にします。

@@ -100,7 +100,8 @@ name (optional), broadcast modes and device. `command` supports an explicit argu
 `hiraku` connects to a remote Hiraku agent; `remote` connects to a remote
 Mirakurun. Remote sources do not install local drivers or enable a local agent.
 Each entry supports `enable`, additional `packages` and native tuner `settings`.
-Local capture options include `b25`, `b61`, `strip`, `args` and `argsBS4K`.
+Local capture options include `b25`, `b61`, `lnb`, `strip`, `args` and `argsBS4K`.
+`lnb = true` requests 15V LNB power for local BS/CS/BS4K capture (`--lnb 15v` for recisdb, `--lnb 15` for recdvb). It defaults to `false` (voltage unset); GR-only tuners and explicit command overrides are unaffected.
 `dtv.packages` supplies replaceable recorder, Hiraku and conversion tools and
 respects consumer overlays. Enable `dtv.hirakud.enable` to serve local tuners
 through Hiraku. Local entries are exported by default; `serve.enable = false`

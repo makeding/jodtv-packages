@@ -170,6 +170,7 @@ let
           if lib.hasPrefix "/dev/" t.device then t.device else "/dev/dvb/adapter${t.device}/frontend0"
         else if t.device != null then t.device else "")
       ]
+      ++ lib.optionals (t.lnb && lib.any (m: builtins.elem m t.mode) [ "BS" "CS" "BS4K" ]) [ "--lnb" "15v" ]
       ++ lib.optional (fourK && t.b61) "--b61"
       ++ lib.optional (!t.strip) "--no-strip"
       ++ lib.optional (!(if fourK then t.b61 else t.b25)) "--no-decode"
@@ -186,6 +187,7 @@ let
         "--dev"
         (if t.device != null then t.device else "")
       ]
+      ++ lib.optionals (t.lnb && lib.any (m: builtins.elem m t.mode) [ "BS" "CS" "BS4K" ]) [ "--lnb" "15" ]
       ++ lib.optional t.strip "--strip"
       ++ lib.optional (if fourK then t.b61 else t.b25) (if fourK then "--b61" else "--b25")
       ++ (if fourK then t.argsBS4K else t.args)
@@ -369,6 +371,11 @@ in
                 type = types.bool;
                 default = true;
                 description = "Enable B61 decoding for local BS4K capture.";
+              };
+              lnb = mkOption {
+                type = types.bool;
+                default = false;
+                description = "Request 15V LNB power for generated local satellite capture commands; false leaves voltage unset.";
               };
               strip = mkOption {
                 type = types.bool;

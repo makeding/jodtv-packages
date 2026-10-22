@@ -434,9 +434,10 @@ let
     dtv.mirakurun.enable = true;
     dtv.hirakud.enable = true;
     dtv.tuners = [
-      { driver = "pt3"; }
+      { driver = "pt3"; lnb = true; }
       {
         name = "PT4K";
+        lnb = true;
         driver = "tbs6812";
         mode = [ "BS" "CS" "BS4K" ];
         device = "0";
@@ -629,13 +630,13 @@ let
 in
 {
   recisdb-capture = pkgs.runCommand "recisdb-capture" { } ''
-    test "$(${runCapture "PT4K" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/dvb/adapter0/frontend0 -)"
-    test "$(${runCapture "PT4K4K" "BS17_0"})" = "$(printf '%s\n' tune --channel BS17_0 --device /dev/dvb/adapter0/frontend0 --b61 --cas-proxy 192.168.6.253:24000 -)"
+    test "$(${runCapture "PT4K" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/dvb/adapter0/frontend0 --lnb 15v -)"
+    test "$(${runCapture "PT4K4K" "BS17_0"})" = "$(printf '%s\n' tune --channel BS17_0 --device /dev/dvb/adapter0/frontend0 --lnb 15v --b61 --cas-proxy 192.168.6.253:24000 -)"
     test "$(${runCapture "PT3-T1" "13"})" = "$(printf '%s\n' tune --channel T13 --device /dev/pt3video2 -)"
     test "$(${runCapture "PT3-T1" "T27"})" = "$(printf '%s\n' tune --channel T27 --device /dev/pt3video2 -)"
     test "$(${runCapture "PT3-T1" "C13"})" = "$(printf '%s\n' tune --channel C13 --device /dev/pt3video2 -)"
-    test "$(${runCapture "PT3-S1" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/pt3video0 -)"
-    test "$(${runCapture "PT3-S1" "CS2"})" = "$(printf '%s\n' tune --channel CS2 --device /dev/pt3video0 -)"
+    test "$(${runCapture "PT3-S1" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/pt3video0 --lnb 15v -)"
+    test "$(${runCapture "PT3-S1" "CS2"})" = "$(printf '%s\n' tune --channel CS2 --device /dev/pt3video0 --lnb 15v -)"
     test "$(${runCapture "raw" "13"})" = "$(printf '%s\n' tune --channel T13 --device '/dev/px4 video0' --no-strip --no-decode --lnb 15v -)"
     test "$(${
       lib.replaceStrings [ "<channel>" ] [ "13" ]
