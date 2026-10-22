@@ -55,6 +55,7 @@
         let
           all = self.legacyPackages.${system};
           darwin = [
+            "a865r-firmware"
             "epgstation-h"
             "hiraku"
             "libaribb61"

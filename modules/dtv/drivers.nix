@@ -1,4 +1,8 @@
 {
+  a865r = {
+    file = ../../kernel-modules/a865r.nix;
+    modules = [ "a865r" ];
+  };
   pt3 = {
     file = ../../kernel-modules/pt3.nix;
     modules = [ "pt3_drv" ];

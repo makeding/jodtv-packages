@@ -125,6 +125,7 @@ let
   selectedDrivers = lib.unique (
     map (t: t.driver) (builtins.filter (t: builtins.hasAttr t.driver drivers) enabled)
   );
+  a865rSelected = builtins.elem "a865r" selectedDrivers;
   driverPackages = lib.genAttrs selectedDrivers (
     name: config.boot.kernelPackages.callPackage drivers.${name}.file { }
   );
@@ -136,6 +137,7 @@ let
         "pt3"
         "px4"
         "tbs6812"
+        "a865r"
       ]
     then
       cfg.packages.recisdb
@@ -160,17 +162,36 @@ let
         "pt3"
         "px4"
         "tbs6812"
+        "a865r"
       ]
     then
       [
         (toString (recisdbCommand t))
         "<channel>"
         "--device"
-        (if t.driver == "tbs6812" && t.device != null then
-          if lib.hasPrefix "/dev/" t.device then t.device else "/dev/dvb/adapter${t.device}/frontend0"
-        else if t.device != null then t.device else "")
+        (
+          if (t.driver == "tbs6812" || t.driver == "a865r") && t.device != null then
+            if lib.hasPrefix "/dev/" t.device then t.device else "/dev/dvb/adapter${t.device}/frontend0"
+          else if t.device != null then
+            t.device
+          else
+            ""
+        )
       ]
-      ++ lib.optionals (t.lnb && lib.any (m: builtins.elem m t.mode) [ "BS" "CS" "BS4K" ]) [ "--lnb" "15v" ]
+      ++
+        lib.optionals
+          (
+            t.lnb
+            && lib.any (m: builtins.elem m t.mode) [
+              "BS"
+              "CS"
+              "BS4K"
+            ]
+          )
+          [
+            "--lnb"
+            "15v"
+          ]
       ++ lib.optional (fourK && t.b61) "--b61"
       ++ lib.optional (!t.strip) "--no-strip"
       ++ lib.optional (!(if fourK then t.b61 else t.b25)) "--no-decode"
@@ -187,7 +208,20 @@ let
         "--dev"
         (if t.device != null then t.device else "")
       ]
-      ++ lib.optionals (t.lnb && lib.any (m: builtins.elem m t.mode) [ "BS" "CS" "BS4K" ]) [ "--lnb" "15" ]
+      ++
+        lib.optionals
+          (
+            t.lnb
+            && lib.any (m: builtins.elem m t.mode) [
+              "BS"
+              "CS"
+              "BS4K"
+            ]
+          )
+          [
+            "--lnb"
+            "15"
+          ]
       ++ lib.optional t.strip "--strip"
       ++ lib.optional (if fourK then t.b61 else t.b25) (if fourK then "--b61" else "--b25")
       ++ (if fourK then t.argsBS4K else t.args)
@@ -316,6 +350,12 @@ let
 in
 {
   options.dtv = {
+    a865r.firmware = mkOption {
+      type = types.nullOr types.path;
+      default = "${pkgs.a865r-firmware}/lib/firmware/a865r/AVer857BDA.sys";
+      defaultText = lib.literalExpression ''"''${pkgs.a865r-firmware}/lib/firmware/a865r/AVer857BDA.sys"'';
+      description = "A865R SYS or raw FW; defaults to the SYS extracted from the pinned Windows installer.";
+    };
     packages = lib.genAttrs [ "recisdb" "recdvb" "recdvb4k" "hiraku" "dantto4k" ] (
       name: lib.mkPackageOption pkgs name { }
     );
@@ -360,7 +400,7 @@ in
               device = mkOption {
                 type = types.nullOr nonEmpty;
                 default = null;
-                description = "Device path for recisdb or adapter number for recdvb.";
+                description = "Device path for recisdb, or adapter number for recdvb.";
               };
               b25 = mkOption {
                 type = types.bool;
@@ -476,15 +516,29 @@ in
     {
       assertions = [
         {
-          assertion = builtins.all (t:
-            !t.enable || t.driver != "tbs6812" || t.mode == null ||
-            !(builtins.elem "GR" t.mode && builtins.any (m: builtins.elem m t.mode) [ "BS" "CS" "BS4K" ])
+          assertion = builtins.all (
+            t:
+            !t.enable
+            || t.driver != "tbs6812"
+            || t.mode == null
+            || !(
+              builtins.elem "GR" t.mode
+              && builtins.any (m: builtins.elem m t.mode) [
+                "BS"
+                "CS"
+                "BS4K"
+              ]
+            )
           ) cfg.tuners;
           message = "TBS6812 tuner modes are exclusive: GR cannot be combined with BS/CS/BS4K.";
         }
         {
           assertion = builtins.all (t: !t.enable || t.driver == "pt3" || t.mode != null) cfg.tuners;
           message = "Non-PT3 tuners require explicit mode; use [] for hardware only.";
+        }
+        {
+          assertion = !a865rSelected || cfg.a865r.firmware != null;
+          message = "A865R requires dtv.a865r.firmware so the driver can load a865r/a865r.fw.";
         }
         {
           assertion = builtins.all (
@@ -534,7 +588,15 @@ in
       boot.extraModulePackages = map (name: driverPackages.${name}) selectedDrivers;
       boot.kernelModules = lib.unique (lib.concatMap (name: drivers.${name}.modules) selectedDrivers);
       boot.blacklistedKernelModules = lib.optional (builtins.elem "pt3" selectedDrivers) "earth_pt3";
-      hardware.firmware = lib.optional (builtins.elem "px4" selectedDrivers) driverPackages.px4;
+      hardware.firmware =
+        lib.optional (builtins.elem "px4" selectedDrivers) driverPackages.px4
+        ++ lib.optional (a865rSelected && cfg.a865r.firmware != null) (
+          pkgs.runCommand "a865r-firmware" { } ''
+            source=${lib.escapeShellArg (toString cfg.a865r.firmware)}
+            test -f "$source"
+            install -D -m 0444 "$source" "$out/lib/firmware/a865r/a865r.fw"
+          ''
+        );
       dtv.exports = {
         channels = cfg.channels;
         hirakuTuners = map (t: {

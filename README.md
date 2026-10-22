@@ -39,7 +39,7 @@ Mirakurun は nixpkgs の NixOS モジュールを利用し、EPGStation はそ�
 選択しません。PT3 の簡略指定には既定のデバイス番号があり、PX4 にはドライバーに
 同梱されたファームウェアが追加されます。それ以外に必要なファームウェアや機器固有の
 設定は利用側で用意してください。
-PT3、上流版 PX4、Siano、TBS6812 のドライバーを含みます。実験的な PX4 PC/SC
+PT3、上流版 PX4、Siano、TBS6812、A865R のドライバーを含みます。実験的な PX4 PC/SC
 プラグインはパッケージ化しておらず、外付けカードリーダーは別パッケージです。
 カーネルドライバーの derivation はモジュール内部で扱い、別のカーネル向けに
 ビルドしたバイナリを公開パッケージとして提供することはありません。
@@ -98,7 +98,7 @@ Git リポジトリが公開されていることだけでは、利用許諾に�
 `dtv.tuners` と `dtv.channels` を一度定義すれば、モジュールが Mirakurun の設定を生成し、
 各チューナーに必要なツールとローカルドライバーを追加します。
 
-ローカルチューナーの `driver` は `pt3`、`px4`、`siano`、`tbs6812`、汎用の `dvb` です。
+ローカルチューナーの `driver` は `a865r`、`pt3`、`px4`、`siano`、`tbs6812`、汎用の `dvb` です。
 `mode = []` はドライバーだけを登録する指定です。受信用の項目には放送方式とデバイスを
 指定し、必要に応じて名前を付けます。`command` ではコマンドを引数のリストで指定できます。
 `hiraku` はリモートの Hiraku エージェント、`remote` はリモートの Mirakurun に接続します。
@@ -125,6 +125,22 @@ Hiraku の `listen` はアプリケーション本来の `address:port` 形式�
 デバイス番号のオフセットも自動で増えます。`name` と `deviceOffset` で既定値を
 変更できます。`mode` を明示した場合は展開せず、単一のチューナーとして扱います。
 `mode = []` はハードウェアの登録のみを行います。PT3 以外では `mode` の明示が必要です。
+
+## A865R
+
+A865R は標準 DVB frontend として登録され、recisdb で録画します。Nix が固定ハッシュの
+Windows インストーラーを Release から取得し、AVer857BDA.sys だけを展開・検証します。
+インストーラーは実行しません。unfree の `a865r-firmware` を許可してください。
+`dtv.a865r.firmware` で別の SYS / FW を指定できます。バイナリはソース管理に含めません。
+
+```nix
+dtv.mirakurun.enable = true;
+dtv.tuners = [{
+  driver = "a865r";
+  mode = [ "GR" ];
+  device = "/dev/dvb/adapter0/frontend0";
+}];
+```
 
 マシン間で設定を再利用する場合は、`A.config.dtv.exports.hirakuTuners` を
 `lib.mkHirakuTuners { tuners = ...; address = ...; secret = ...; }` に渡します。

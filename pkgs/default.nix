@@ -1,5 +1,6 @@
 { callPackage, inputs }:
 {
+  a865r-firmware = callPackage ./a865r-firmware/package.nix { };
   casproxyserver = callPackage ./casproxyserver/package.nix { };
   dantto4k = callPackage ./dantto4k/package.nix { };
   epgstation-h = callPackage ./epgstation-h/package.nix { };

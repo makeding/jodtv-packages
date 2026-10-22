@@ -293,6 +293,31 @@ let
     && builtins.elem "pt3_drv" hardwareOnly.boot.kernelModules
     && !hardwareOnly.services.pcscd.enable;
 
+  a865rFirmware = pkgs.writeText "a865r-test.fw" "test firmware";
+  a865rTuner = configOf {
+    dtv.mirakurun.enable = true;
+    dtv.hirakud.enable = true;
+    dtv.a865r.firmware = a865rFirmware;
+    dtv.tuners = [
+      {
+        name = "A865R";
+        driver = "a865r";
+        mode = [ "GR" ];
+        device = "/dev/dvb/adapter2/frontend0";
+      }
+    ];
+  };
+  a865rTunerContract =
+    let
+      record = builtins.head a865rTuner.services.hirakud.settings.modes.A865R.record;
+    in
+    builtins.length a865rTuner.boot.extraModulePackages == 1
+    && builtins.elem "a865r" a865rTuner.boot.kernelModules
+    && a865rTuner.dtv.a865r.firmware == a865rFirmware
+    && (builtins.head a865rTuner.services.mirakurun.tunerSettings).types == [ "GR" ]
+    && builtins.elem "--device" record
+    && builtins.elem "/dev/dvb/adapter2/frontend0" record;
+
   genericCard = configOf {
     dtv.card.enable = true;
     dtv.hirakud.enable = true;
@@ -434,16 +459,26 @@ let
     dtv.mirakurun.enable = true;
     dtv.hirakud.enable = true;
     dtv.tuners = [
-      { driver = "pt3"; lnb = true; }
+      {
+        driver = "pt3";
+        lnb = true;
+      }
       {
         name = "PT4K";
         lnb = true;
         driver = "tbs6812";
-        mode = [ "BS" "CS" "BS4K" ];
+        mode = [
+          "BS"
+          "CS"
+          "BS4K"
+        ];
         device = "0";
         serve.mode = "PT4K";
         serve.modeBS4K = "PT4K4K";
-        argsBS4K = [ "--cas-proxy" "192.168.6.253:24000" ];
+        argsBS4K = [
+          "--cas-proxy"
+          "192.168.6.253:24000"
+        ];
       }
       {
         name = "raw";
@@ -520,20 +555,60 @@ let
   pt4kSplit = configOf {
     dtv.mirakurun.enable = true;
     dtv.tuners = [
-      { name = "PT4K-T"; driver = "tbs6812"; device = "0"; mode = [ "GR" ]; }
-      { name = "PT4K-S"; driver = "tbs6812"; device = "1"; mode = [ "BS" "CS" "BS4K" ]; }
+      {
+        name = "PT4K-T";
+        driver = "tbs6812";
+        device = "0";
+        mode = [ "GR" ];
+      }
+      {
+        name = "PT4K-S";
+        driver = "tbs6812";
+        device = "1";
+        mode = [
+          "BS"
+          "CS"
+          "BS4K"
+        ];
+      }
     ];
   };
   pt4kModesContract =
-    builtins.all (a: a.assertion || a.message != "TBS6812 tuner modes are exclusive: GR cannot be combined with BS/CS/BS4K.") pt4kSplit.assertions
+    builtins.all (
+      a:
+      a.assertion
+      || a.message != "TBS6812 tuner modes are exclusive: GR cannot be combined with BS/CS/BS4K."
+    ) pt4kSplit.assertions
     && (builtins.elemAt pt4kSplit.services.mirakurun.tunerSettings 0).types == [ "GR" ]
     && !(builtins.hasAttr "commandBS4K" (builtins.elemAt pt4kSplit.services.mirakurun.tunerSettings 0))
-    && (builtins.elemAt pt4kSplit.services.mirakurun.tunerSettings 1).types == [ "BS" "CS" "BS4K" ]
-    && builtins.all (satellite:
-      assertionFails "TBS6812 tuner modes are exclusive: GR cannot be combined with BS/CS/BS4K." {
-        dtv.tuners = [{ driver = "tbs6812"; device = "0"; mode = [ "GR" satellite ]; }];
-      }
-    ) [ "BS" "CS" "BS4K" ];
+    &&
+      (builtins.elemAt pt4kSplit.services.mirakurun.tunerSettings 1).types == [
+        "BS"
+        "CS"
+        "BS4K"
+      ]
+    &&
+      builtins.all
+        (
+          satellite:
+          assertionFails "TBS6812 tuner modes are exclusive: GR cannot be combined with BS/CS/BS4K." {
+            dtv.tuners = [
+              {
+                driver = "tbs6812";
+                device = "0";
+                mode = [
+                  "GR"
+                  satellite
+                ];
+              }
+            ];
+          }
+        )
+        [
+          "BS"
+          "CS"
+          "BS4K"
+        ];
 
   invalidContract =
     assertionFails "dtv.tuners names must be unique." {
@@ -617,6 +692,7 @@ let
     && require "explicit PT3 tuner" explicitPt3Contract
     && require "unnamed PT3 tuners" unnamedPt3Contract
     && require "hardware-only tuner" hardwareOnlyContract
+    && require "A865R DVB tuner" a865rTunerContract
     && require "generic card" genericCardContract
     && require "RW5100 card" rw5100CardContract
     && require "disabled card" cardDisabledContract

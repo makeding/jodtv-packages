@@ -38,7 +38,7 @@ The tuner module builds drivers against the consuming system's
 storage or host-specific module parameters. Compact PT3 entries provide default
 device numbering, and PX4 entries include the driver's bundled firmware.
 Other required firmware and device-specific settings remain the consumer's responsibility.
-PT3, upstream PX4, Siano and TBS6812 drivers are included. The experimental
+PT3, upstream PX4, Siano, TBS6812 and A865R drivers are included. The experimental
 PX4 PC/SC plugin is not packaged; external readers remain separate packages. Kernel-driver derivations
 remain private to the module interface rather than exporting binaries tied to
 a different kernel.
@@ -94,7 +94,7 @@ Import `nixosModules.default` (overlay and modules), or import
 and `dtv.channels` once; the module generates the Mirakurun configuration and
 installs the tools and local drivers selected by each tuner.
 
-Local tuner drivers are `pt3`, `px4`, `siano`, `tbs6812` and generic `dvb`.
+Local tuner drivers are `a865r`, `pt3`, `px4`, `siano`, `tbs6812` and generic `dvb`.
 Use `mode = []` for a hardware-only declaration. Capturing entries specify a
 name (optional), broadcast modes and device. `command` supports an explicit argument list.
 `hiraku` connects to a remote Hiraku agent; `remote` connects to a remote
@@ -118,6 +118,24 @@ two GR and two BS/CS inputs. Further compact PT3 cards continue with T3/T4/S3/S4
 the device offset automatically. Explicit `name` and `deviceOffset`
 override those defaults. Supplying `mode` creates one entry without expansion;
 `mode = []` registers only hardware. Other drivers require explicit `mode`.
+
+## A865R
+
+The A865R driver creates a standard DVB frontend and is captured with recisdb.
+Nix downloads the pinned Windows installer from the `makeding/a865r` initial
+release, extracts only `AVer857BDA.sys`, and verifies its SHA-256. The installer
+is never executed. Allow the unfree `a865r-firmware` package in your Nixpkgs
+policy. Override `dtv.a865r.firmware` to supply another SYS or raw FW. Vendor
+binaries are not committed to this source repository.
+
+```nix
+dtv.mirakurun.enable = true;
+dtv.tuners = [{
+  driver = "a865r";
+  mode = [ "GR" ];
+  device = "/dev/dvb/adapter0/frontend0";
+}];
+```
 
 For cross-machine reuse, pass `A.config.dtv.exports.hirakuTuners` to
 `lib.mkHirakuTuners { tuners = ...; address = ...; secret = ...; }`, or pass
