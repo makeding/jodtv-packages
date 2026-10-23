@@ -33,13 +33,17 @@ rustPlatform.buildRustPackage (finalAttrs: rec {
   ];
   nativeBuildInputs = [ makeWrapper ];
 
-  # utoipa-swagger-ui otherwise downloads this archive during compilation.
-  SWAGGER_UI_DOWNLOAD_URL = "file://${
-    fetchurl {
-      url = "https://github.com/swagger-api/swagger-ui/archive/refs/tags/v5.32.6.zip";
-      hash = "sha256-s8B+CRVZtZqDP2ZUfrH8GPKJb5bj8flT4vHvsyiqM5Q=";
-    }
-  }";
+  # fs::copy preserves permissions: a store input leaves a read-only ZIP in
+  # OUT_DIR that subsequent build-script runs cannot overwrite.
+  preBuild = ''
+    install -m644 ${
+      fetchurl {
+        url = "https://github.com/swagger-api/swagger-ui/archive/refs/tags/v5.32.6.zip";
+        hash = "sha256-s8B+CRVZtZqDP2ZUfrH8GPKJb5bj8flT4vHvsyiqM5Q=";
+      }
+    } "$NIX_BUILD_TOP/swagger-ui.zip"
+    export SWAGGER_UI_DOWNLOAD_URL="file://$NIX_BUILD_TOP/swagger-ui.zip"
+  '';
   VERGEN_GIT_SHA = src.rev;
 
   postPatch = ''
