@@ -8,6 +8,8 @@ on:
       - 'flake.nix'
       - 'flake.lock'
       - 'overlay.nix'
+      - 'scripts/build-common-deps.py'
+      - 'scripts/test_build_common_deps.py'
       - '.github/workflows/build-packages.yml'
   # GITHUB_TOKEN pushes from the updater do not trigger push workflows.
   workflow_run:
@@ -32,13 +34,14 @@ env:
 
 jobs:
   prepare:
+    name: Build and cache common dependencies
     if: >-
       github.ref_name == github.event.repository.default_branch &&
       (github.event_name != 'workflow_run' ||
        (github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.head_branch == github.event.repository.default_branch))
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 360
     outputs:
       packages: ${{ steps.packages.outputs.packages }}
       revision: ${{ steps.packages.outputs.revision }}
@@ -61,30 +64,32 @@ jobs:
       - uses: cachix/install-nix-action@d9186cbdca7adedf113a159fa91f725a27866771 # v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            max-jobs = 1
+            cores = 2
 
-      - name: Select packages and pin the build revision
+      - name: Read and populate the jodtv binary cache
+        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: jodtv
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Check dependency planning
+        run: python3 -B -m unittest discover -s scripts -p test_build_common_deps.py
+
+      - name: Build common dependencies and pin the build revision
         id: packages
         env:
           REQUESTED_PACKAGES: ${{ inputs.packages }}
         run: |
-          export AVAILABLE_PACKAGES
-          AVAILABLE_PACKAGES="$(nix eval --json --apply builtins.attrNames .#packages.x86_64-linux)"
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          import os
-
-          available = json.loads(os.environ['AVAILABLE_PACKAGES'])
-          requested = list(dict.fromkeys(os.environ['REQUESTED_PACKAGES'].replace(',', ' ').split()))
-          unknown = sorted(set(requested) - set(available))
-          if unknown:
-              raise SystemExit('Unknown packages: ' + ', '.join(unknown))
-          print('packages=' + json.dumps(requested or available))
-          PY
+          python3 -B scripts/build-common-deps.py --build --packages "$REQUESTED_PACKAGES"
           echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build ${{ matrix.package }} (x86_64-linux)
+    # needs includes the prepare job's post steps, so Cachix has flushed uploads.
     needs: prepare
+    if: needs.prepare.outputs.packages != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     strategy:

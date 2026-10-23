@@ -8,13 +8,13 @@
 
 stdenv.mkDerivation {
   pname = "libaribtlv";
-  version = "0.6.1-unstable-2026-08-28";
+  version = "0.6.1-unstable-2026-10-23";
 
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "libaribtlv";
-    rev = "a84e5b62bf9230d3fcea21c66e62f7cc5d50a3c2";
-    hash = "sha256-BNj22/icgvoH4TCSuHZt2QzkVN0W0q2GvpsXAcvdJLo=";
+    rev = "f4a603b37cbaf5c93ed2e5a133293bacdfca70ad";
+    hash = "sha256-cgNgtnV3YI6xL2tuGJCBiJhaZeJO2MoZEoEORpqZ8BU=";
   };
 
   nativeBuildInputs = [ cmake ];
