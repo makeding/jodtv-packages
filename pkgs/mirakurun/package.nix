@@ -19,8 +19,8 @@ buildNpmPackage rec {
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "Mirakurun";
-    rev = "3d724ebc503e239f9cfcaae5e9a99cb172c7d65f";
-    sha256 = "sha256-Tw/7m6zVvMZddUhCjSuXTSgcXfyozZj7Q2btLdvNm3A=";
+    rev = "87f0ac5b29b9f29c699ec5f51a5ad87480bbc600";
+    sha256 = "sha256-SqIcFEoeWIEyNnNZgtukk8gLAoaChXr3QyFgeegewmc=";
   };
 
   postUnpack = ''
@@ -29,7 +29,7 @@ buildNpmPackage rec {
     # sed -i '/\.yml", path);/a fs.chmodSync(path, 0o644);' source/src/Mirakurun/config.ts
   '';
 
-  npmDepsHash = "sha256-+bat/BWQM8qH/S7Vf4oMHilHw1R7BBLnx7A0lJaP+uI=";
+  npmDepsHash = "sha256-QZu2yx+hoLM5inwoJZ7ubA19gqvjbaggb2367zhuvEY=";
 
   nativeBuildInputs = [
     installShellFiles
