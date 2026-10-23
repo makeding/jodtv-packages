@@ -133,19 +133,21 @@ def cachix_plan(api, upstream, cache, roots, protected, github_entries):
     # Magic Nix Cache narinfo/NAR pair remains on GitHub.  Keep that NAR too.
     # Metadata is mandatory: deleting its NAR without knowing the digest would
     # leave the protected narinfo incomplete.
-    github_narinfos = {
-        match[1]
-        for entry in github_entries
-        if (match := MAGIC_KEY.fullmatch(entry["key"])) and match[1] in protected
-    }
-    for value in github_narinfos:
-        info = narinfo(value)
-        if info is None:
-            raise ValueError(f"Cannot determine NAR hash for protected GitHub cache path: {value}")
-        nar = NAR_HASH.fullmatch(info["narHash"])
-        if not nar:
-            raise ValueError(f"Unexpected NAR hash for protected GitHub cache path: {value}")
-        nars.add(nar[1])
+    def protect_github_nars(paths):
+        for value in {
+            match[1]
+            for entry in github_entries
+            if (match := MAGIC_KEY.fullmatch(entry["key"])) and match[1] in paths
+        }:
+            info = narinfo(value)
+            if info is None:
+                raise ValueError(f"Cannot determine NAR hash for protected GitHub cache path: {value}")
+            nar = NAR_HASH.fullmatch(info["narHash"])
+            if not nar:
+                raise ValueError(f"Unexpected NAR hash for protected GitHub cache path: {value}")
+            nars.add(nar[1])
+
+    protect_github_nars(protected)
 
     pins = api.request(f"/api/v1/cache/{cache}/pin")
     if not isinstance(pins, list):
@@ -154,8 +156,12 @@ def cachix_plan(api, upstream, cache, roots, protected, github_entries):
     # Preserve the entire cache when those histories cannot be proven safe, but
     # only after current roots and GitHub NAR protection have been validated.
     if pins:
+        protected = protected | available
+        # The expanded set keeps every Cachix narinfo.  Preserve the matching
+        # GitHub NARs as well, or its protected narinfos would become broken.
+        protect_github_nars(protected)
         print("Cachix GC skipped: existing pins may retain historical closures.", flush=True)
-        return set(), protected | available, nars
+        return set(), protected, nars
     return available - protected, protected, nars
 
 

@@ -91,12 +91,19 @@ class CacheRetentionTests(unittest.TestCase):
 
     def test_cachix_pins_preserve_unenumerable_history_and_github_nars(self):
         api = Mock()
-        api.request.side_effect = [[A, B], [{"name": "release", "keep": {"Forever": []}}]]
+        api.request.side_effect = lambda path: {
+            "/api/v1/cache/jodtv/contents": [A, B],
+            "/api/v1/cache/jodtv/pin": [{"name": "release", "keep": {"Forever": []}}],
+            f"/api/v1/cache/jodtv/{A}.narinfo": info(NAR_A),
+        }[path]
         with patch("builtins.print"):
-            obsolete, protected, nars = gc.cachix_plan(api, Mock(), "jodtv", {}, {C}, [])
+            obsolete, protected, nars = gc.cachix_plan(
+                api, Mock(), "jodtv", {}, {C}, [entry(1, A + ".narinfo-aB12")]
+            )
         self.assertFalse(obsolete)
         self.assertEqual(protected, {A, B, C})
-        self.assertEqual(nars, set())
+        self.assertEqual(nars, {NAR_A})
+        self.assertFalse(gc.github_plan([entry(1, NAR_A + ".nar.zstd-aB12")], protected, nars, REF))
         self.assertEqual(
             [item["id"] for item in gc.github_plan([entry(1, NAR_C + ".nar.zstd-aB12")], protected, nars, REF)],
             [1],
