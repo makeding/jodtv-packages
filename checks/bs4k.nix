@@ -21,7 +21,7 @@ let
   forbidden = systemOf { dtv.bs4k = false; dtv.tuners = [ tuner ]; };
   selected = manual.pkgs;
   ffmpeg = selected.ffmpeg-libaribtlv;
-  hasInput = p: input: builtins.elem input.outPath (map (p: p.outPath) p.buildInputs);
+  hasInput = p: input: builtins.elem (lib.getDev input).outPath (map (p: p.outPath) p.buildInputs);
   hasReference = text: p: lib.hasInfix (builtins.unsafeDiscardStringContext p.outPath)
     (builtins.unsafeDiscardStringContext text);
 in
