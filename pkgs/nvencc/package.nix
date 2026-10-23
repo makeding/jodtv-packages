@@ -7,11 +7,28 @@
   autoPatchelfHook,
   addDriverRunpath,
   makeWrapper,
+  callPackage,
+  fetchFromGitHub,
+  ffmpeg,
+  fromSource ? false,
 }:
-
+let
+  version = "9.38";
+  sourceBuild = callPackage ./source.nix {
+    inherit version ffmpeg;
+    src = fetchFromGitHub {
+      owner = "rigaya";
+      repo = "NVEnc";
+      rev = version;
+      hash = "sha256-+ElEK+G5ccNWUhXj+NtHY9vm6gvQqGUSdSVyNGxKHcE=";
+      fetchSubmodules = true;
+    };
+  };
+in
+if fromSource then sourceBuild else
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "nvencc";
-  version = "9.38";
+  inherit version;
 
   src = fetchurl {
     url = "https://github.com/rigaya/NVEnc/releases/download/${finalAttrs.version}/nvencc_${finalAttrs.version}_amd64.deb";
@@ -39,6 +56,8 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     wrapProgram "$out/bin/nvencc" \
       --prefix LD_LIBRARY_PATH : ${addDriverRunpath.driverLink}/lib
   '';
+
+  passthru = { inherit sourceBuild; fromSource = false; };
 
   meta = {
     description = "NVENC command-line encoder with bundled CUDA processing kernels";

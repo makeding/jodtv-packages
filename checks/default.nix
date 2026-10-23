@@ -154,3 +154,4 @@ in
 // import ./casproxyserver.nix { inherit self nixpkgs pkgs; }
 // import ./amatsukaze.nix { inherit self nixpkgs pkgs; }
 // import ./transcoder-bundles.nix { inherit self nixpkgs pkgs; }
+// import ./bs4k.nix { inherit self nixpkgs pkgs; }

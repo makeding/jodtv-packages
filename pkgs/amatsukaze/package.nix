@@ -12,8 +12,29 @@
   zlib,
   krb5,
   glibc,
+  runtimeShell,
+  callPackage,
+  fetchFromGitHub,
+  ffmpeg-libaribtlv,
+  ffmpeg,
+  bs4k ? false,
+  tsreplace,
+  gpac,
 }:
 let
+  version = "1.1.1.3";
+  sourceBuild = callPackage ./native.nix {
+    inherit version;
+    ffmpeg = if bs4k then ffmpeg else ffmpeg-libaribtlv;
+    src = fetchFromGitHub {
+      owner = "rigaya";
+      repo = "Amatsukaze";
+      rev = version;
+      hash = "sha256-5kqbanjIBAJMlO1I/bvo7wVZkinyBewneZMtFBZUH/s=";
+      fetchSubmodules = true;
+    };
+  };
+  mp4box = gpac.override { ffmpeg-headless = ffmpeg; withFfmpeg = true; };
   fonts = writeText "amatsukaze-fonts.conf" ''
     <?xml version="1.0"?>
     <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
@@ -25,7 +46,7 @@ let
 in
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "amatsukaze";
-  version = "1.1.1.3";
+  inherit version;
 
   src = fetchurl {
     url = "https://github.com/rigaya/Amatsukaze/releases/download/${finalAttrs.version}/Amatsukaze_linux_${finalAttrs.version}_x64.tar.xz";
@@ -72,10 +93,31 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     autoPatchelf "$out"
     for program in AmatsukazeServerCLI AmatsukazeAddTask ScriptCommand AmatsukazeDockerConfigFix; do
       install -m755 "dotnet-unpatched/$program" "$out/share/amatsukaze/exe_files/.$program-unwrapped"
-      makeWrapper ${glibc}/lib/ld-linux-x86-64.so.2 "$out/share/amatsukaze/exe_files/$program" \
-        --add-flags "--library-path ${glibc}/lib:$out/share/amatsukaze/exe_files/lib $out/share/amatsukaze/exe_files/.$program-unwrapped"
+      substitute ${./dotnet-host.sh} "$out/share/amatsukaze/exe_files/$program" \
+        --subst-var-by shell ${runtimeShell} \
+        --subst-var-by loader ${glibc}/lib/ld-linux-x86-64.so.2 \
+        --subst-var-by glibc ${glibc}
+      chmod +x "$out/share/amatsukaze/exe_files/$program"
     done
+  '' + lib.optionalString bs4k ''
+    # Replace every bundled libav consumer, including the --loadv2 engine.
+    rm "$out/share/amatsukaze/exe_files/"{libAmatsukaze.so,libAmatsukaze2.so,AmatsukazeCLI,AmatsukazeGenLogo,tsreplace,MP4Box}
+    for library in libAmatsukaze.so libAmatsukaze2.so; do
+      ln -s ${sourceBuild}/lib/$library "$out/share/amatsukaze/exe_files/$library"
+    done
+    for program in AmatsukazeCLI AmatsukazeGenLogo; do
+      cp ${sourceBuild}/bin/$program "$out/share/amatsukaze/exe_files/$program"
+    done
+    ln -s ${tsreplace}/bin/tsreplace "$out/share/amatsukaze/exe_files/tsreplace"
+    ln -s ${mp4box}/bin/MP4Box "$out/share/amatsukaze/exe_files/MP4Box"
+    rm "$out/share/amatsukaze/exe_files/lib/"{libstdc++.so.6,libgcc_s.so.1}
+    ln -s ${sourceBuild.compilerRuntime}/lib/libstdc++.so.6 "$out/share/amatsukaze/exe_files/lib/libstdc++.so.6"
+    ln -s ${sourceBuild.compilerRuntime}/lib/libgcc_s.so.1 "$out/share/amatsukaze/exe_files/lib/libgcc_s.so.1"
   '';
+
+  passthru = { inherit sourceBuild bs4k; } // lib.optionalAttrs bs4k {
+    inherit mp4box tsreplace;
+  };
 
   meta = {
     description = "Automated MPEG-TS transcoder with CM analysis, subtitles and WebUI";

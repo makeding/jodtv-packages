@@ -17,7 +17,8 @@ ROOT = Path(__file__).resolve().parent.parent
 # These track release tags; other packages track their default branch.
 RELEASES = {"mirakc", "mirakc-arib", "intel-media-sdk-h", "qsvencc", "psisimux", "tsreadex", "amatsukaze", "nvencc"}
 SUBPACKAGES = {"honomitv": "frontend", "konomitv": "frontend",
-               "epgstation-h": "clientDir", "epgstation-upstream": "clientDir"}
+               "epgstation-h": "clientDir", "epgstation-upstream": "clientDir",
+               "amatsukaze": "sourceBuild", "nvencc": "sourceBuild"}
 ALIASES = {"epgstation": "epgstation-h"}
 EXCLUDED = {"ffmpeg-libaribtlv", "edcb-wine"}
 MANIFESTS = {
