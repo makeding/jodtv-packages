@@ -149,6 +149,7 @@ in
 }
 // import ./dtv.nix { inherit self nixpkgs pkgs; }
 // import ./honomitv.nix { inherit pkgs; }
+// import ./honomitv-encoders.nix { inherit self nixpkgs pkgs; }
 // import ./upstream.nix { inherit self nixpkgs pkgs; }
 // import ./edcb-wine.nix { inherit self nixpkgs pkgs; }
 // import ./casproxyserver.nix { inherit self nixpkgs pkgs; }

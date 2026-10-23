@@ -26,21 +26,33 @@ in
   options.services.honomitv = {
     enable = lib.mkEnableOption "HonomiTV - Modern TV media server";
 
-    package = lib.mkPackageOption pkgs "honomitv" { };
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.honomitv.override {
+        qsvencc = if cfg.encoder == "QSVEncC" then pkgs.qsvencc else null;
+        nvencc = if cfg.encoder == "NVEncC" then pkgs.nvencc else null;
+      };
+      defaultText = lib.literalExpression "pkgs.honomitv with the selected encoder";
+      description = "HonomiTV package. The default includes only the hardware encoder selected by services.honomitv.encoder; explicit packages are used unchanged.";
+    };
 
     encoder = lib.mkOption {
       type = lib.types.enum [
         "FFmpeg"
         "QSVEncC"
+        "NVEncC"
       ];
       default = "FFmpeg";
       description = ''
-        Video encoder written to the initial configuration. Existing config.yaml is preserved.
+        Hardware encoder included in the default package and written to the initial
+        configuration. Existing config.yaml is preserved.
 
         - FFmpeg: Software encoder (CPU-based, works everywhere but slow)
         - QSVEncC: Intel Quick Sync Video (requires Intel CPU with integrated graphics)
+        - NVEncC: NVIDIA NVENC (requires an NVIDIA GPU and driver)
 
-        After initialization, the encoder can be changed in HonomiTV.
+        FFmpeg is always available. Changing the installed hardware backend requires
+        a rebuild and a matching encoder setting in HonomiTV.
       '';
       example = "QSVEncC";
     };
@@ -166,13 +178,10 @@ in
         HONOMITV_WORK_DIR = cfg.dataDir;
         # Add Nix store path to PYTHONPATH so Python can find app modules
         PYTHONPATH = "${cfg.package}/lib/honomitv";
-        # QSV environment variables
-        LIBVA_DRIVER_NAME = "iHD";
-        ONEVPL_SEARCH_PATH = "${pkgs.intel-media-sdk-h}/lib";
         # Add graphics drivers and Python packages bundled libraries to library path
         LD_LIBRARY_PATH = lib.concatStringsSep ":" (
-          [
-            "${pkgs.intel-media-sdk-h}/lib" # Put intel-media-sdk-h first to ensure it's found
+          lib.optional (cfg.encoder == "QSVEncC") "${pkgs.intel-media-sdk-h}/lib"
+          ++ [
             "${cfg.package}/lib/honomitv/.venv/lib/python${pythonVersion}/site-packages/av.libs"
             "${cfg.package}/lib/honomitv/.venv/lib/python${pythonVersion}/site-packages/opencv_python_headless.libs"
             "${cfg.package}/lib/honomitv/.venv/lib/python${pythonVersion}/site-packages/pillow.libs"
@@ -184,6 +193,10 @@ in
             (lib.makeSearchPathOutput "lib" "lib" config.hardware.graphics.extraPackages)
           ]
         );
+      }
+      // lib.optionalAttrs (cfg.encoder == "QSVEncC") {
+        LIBVA_DRIVER_NAME = "iHD";
+        ONEVPL_SEARCH_PATH = "${pkgs.intel-media-sdk-h}/lib";
       };
 
       serviceConfig = {

@@ -47,16 +47,21 @@ let
       builtins.unsafeDiscardStringContext text
     );
   toolPaths =
-    name:
+    name: package:
     let
-      package = selected.${name};
       expected = builtins.unsafeDiscardStringContext (
-        builtins.toJSON {
-          FFmpeg = "${ffmpeg}/bin/ffmpeg";
-          FFprobe = "${ffmpeg}/bin/ffprobe";
-          NVEncC = "${selected.nvencc}/bin/nvencc";
-          QSVEncC = "${selected.qsvencc}/bin/qsvencc";
-        }
+        builtins.toJSON (
+          {
+            FFmpeg = "${ffmpeg}/bin/ffmpeg";
+            FFprobe = "${ffmpeg}/bin/ffprobe";
+          }
+          // lib.optionalAttrs (package.nvenccForHost != null) {
+            NVEncC = "${package.nvenccForHost}/bin/nvencc";
+          }
+          // lib.optionalAttrs (package.qsvenccForHost != null) {
+            QSVEncC = "${package.qsvenccForHost}/bin/qsvencc";
+          }
+        )
       );
     in
     pkgs.stdenvNoCC.mkDerivation {
@@ -90,7 +95,7 @@ let
                    and isinstance(n.left, ast.Name) and n.left.id == 'library_name'
                    and isinstance(n.ops[0], ast.In) and isinstance(n.comparators[0], ast.List)]
         lists = [ast.literal_eval(n.comparators[0]) for n in skipped]
-        expected_skip = {'Akebi', 'VCEEncC', 'rkmppenc'}
+        expected_skip = set(json.loads('${builtins.toJSON package.uncheckedTools}'))
         assert sum(set(names) == expected_skip for names in lists) == 1, lists
         PY
       '';
@@ -99,8 +104,18 @@ let
   nativeAV = name: (pkgs.${name}.override { ffmpeg-headless = pkgs.ffmpeg-libaribtlv; }).pythonSet.av;
 in
 {
-  honomitv-media-tool-paths = toolPaths "honomitv";
-  konomitv-media-tool-paths = toolPaths "konomitv";
+  honomitv-media-tool-paths = toolPaths "honomitv" selected.honomitv;
+  konomitv-media-tool-paths = toolPaths "konomitv" selected.konomitv;
+  honomitv-qsv-tool-paths = toolPaths "honomitv-qsv" (selected.honomitv.override { nvencc = null; });
+  honomitv-nvenc-tool-paths = toolPaths "honomitv-nvenc" (
+    selected.honomitv.override { qsvencc = null; }
+  );
+  honomitv-software-tool-paths = toolPaths "honomitv-software" (
+    selected.honomitv.override {
+      qsvencc = null;
+      nvencc = null;
+    }
+  );
   bs4k-pyav = pkgs.runCommand "bs4k-pyav" { } ''
     PYTHONPATH=${nativeAV "honomitv"}/${pkgs.python314.sitePackages} ${pkgs.python314.interpreter} - <<'PY'
     import av
@@ -123,6 +138,19 @@ in
     assert normal.pkgs.tsreplace.drvPath == disabled.pkgs.tsreplace.drvPath;
     assert !normal.pkgs.nvencc.fromSource;
     assert !normal.pkgs.amatsukaze.bs4k;
+    assert hasInput normal.pkgs.tsreplace normal.pkgs.ffmpeg;
+    assert hasInput normal.pkgs.qsvencc normal.pkgs.ffmpeg;
+    assert hasInput normal.pkgs.honomitv normal.pkgs.ffmpeg-headless;
+    assert hasInput normal.pkgs.konomitv normal.pkgs.ffmpeg-headless;
+    assert normal.pkgs.amatsukaze.sourceBuild.ffmpeg.drvPath == normal.pkgs.ffmpeg.drvPath;
+    assert builtins.all (name: !(hasReference normal.pkgs.${name}.postPatch ffmpeg)) [
+      "honomitv"
+      "konomitv"
+    ];
+    assert builtins.all (name: !(hasReference normal.pkgs.${name}.postInstall ffmpeg)) [
+      "epgstation-h"
+      "epgstation-upstream"
+    ];
     assert selected.tsreplace.drvPath == automatic.pkgs.tsreplace.drvPath;
     assert hasInput selected.tsreplace ffmpeg;
     assert hasInput selected.qsvencc ffmpeg;
@@ -153,7 +181,11 @@ in
       "epgstation-upstream"
     ];
     assert manual.config.services.epgstation.package.drvPath == selected.epgstation-h.drvPath;
-    assert manual.config.services.honomitv.package.drvPath == selected.honomitv.drvPath;
+    assert
+      manual.config.services.honomitv.package.drvPath == (selected.honomitv.override {
+        qsvencc = null;
+        nvencc = null;
+      }).drvPath;
     assert manual.config.services.amatsukaze.package.drvPath == selected.amatsukaze.drvPath;
     pkgs.runCommand "bs4k-dependency-selection" { } "touch $out";
 }

@@ -24,6 +24,19 @@ let
     }).config;
   disabled = configOf { };
   enabled = configOf { dtv.epgstation.enable = true; };
+  direct = configOf { services.epgstation.enable = true; };
+  directPortOverride = configOf {
+    services.epgstation = {
+      enable = true;
+      settings.port = 18080;
+    };
+  };
+  dtvPortOverride = configOf {
+    dtv.epgstation = {
+      enable = true;
+      listen.port = 18081;
+    };
+  };
   existing = configOf {
     dtv.epgstation.enable = true;
     services.epgstation.database = {
@@ -46,8 +59,18 @@ in
     assert enabled.services.mysql.settings.mysqld.bind-address == "127.0.0.1";
     assert enabled.services.epgstation.database.passwordFile == "/var/lib/epgstation-db-password";
     assert enabled.services.epgstation.settings.mysql.password == "@dbPassword@";
-    assert enabled.services.epgstation.settings.port == 20772;
-    assert enabled.services.epgstation.settings.socketioPort == 20773;
+    assert enabled.services.epgstation.settings.port == 8888;
+    assert enabled.services.epgstation.settings.socketioPort == 8889;
+    assert enabled.services.epgstation.settings.clientSocketioPort == 8889;
+    assert direct.services.epgstation.settings.port == 8888;
+    assert direct.services.epgstation.settings.socketioPort == 8889;
+    assert direct.services.epgstation.settings.clientSocketioPort == 8889;
+    assert directPortOverride.services.epgstation.settings.port == 18080;
+    assert directPortOverride.services.epgstation.settings.socketioPort == 18081;
+    assert directPortOverride.services.epgstation.settings.clientSocketioPort == 18081;
+    assert dtvPortOverride.services.epgstation.settings.port == 18081;
+    assert dtvPortOverride.services.epgstation.settings.socketioPort == 18082;
+    assert dtvPortOverride.services.epgstation.settings.clientSocketioPort == 18082;
     assert builtins.elem "mirakurun.service" enabled.systemd.services.epgstation.after;
     assert builtins.elem "mysql.service" enabled.systemd.services.epgstation.after;
     assert existing.services.epgstation.database.passwordFile == "/run/secrets/epgstation-db";

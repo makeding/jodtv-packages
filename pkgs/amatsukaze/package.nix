@@ -15,7 +15,6 @@
   runtimeShell,
   callPackage,
   fetchFromGitHub,
-  ffmpeg-libaribtlv,
   ffmpeg,
   bs4k ? false,
   tsreplace,
@@ -24,8 +23,7 @@
 let
   version = "1.1.1.3";
   sourceBuild = callPackage ./native.nix {
-    inherit version;
-    ffmpeg = if bs4k then ffmpeg else ffmpeg-libaribtlv;
+    inherit version ffmpeg;
     src = fetchFromGitHub {
       owner = "rigaya";
       repo = "Amatsukaze";

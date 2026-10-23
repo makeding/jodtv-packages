@@ -15,6 +15,9 @@ in
   config = lib.mkMerge [
     (lib.mkIf cfg.enable {
       services.epgstation.database.passwordFile = lib.mkDefault databasePasswordFile;
+      # Keep the original EPGStation HTTP port.  The upstream module derives
+      # Socket.IO and client Socket.IO ports from this setting.
+      services.epgstation.settings.port = lib.mkDefault 8888;
       services.mysql.settings.mysqld.bind-address = lib.mkDefault "127.0.0.1";
       system.activationScripts.epgstationDatabasePassword =
         lib.mkIf (cfg.database.passwordFile == databasePasswordFile)

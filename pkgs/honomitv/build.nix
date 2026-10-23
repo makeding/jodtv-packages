@@ -11,7 +11,7 @@
   ffmpeg-headless,
   pkg-config,
   qsvencc ? null,
-  nvencc,
+  nvencc ? null,
   tsreadex,
   psisiarc,
   psisimux,
@@ -35,7 +35,13 @@ let
 
   qsvenccForHost = if stdenv.hostPlatform.isLinux then qsvencc else null;
   nvenccForHost = if stdenv.hostPlatform.isLinux then nvencc else null;
-  uncheckedTools = [ "Akebi" "VCEEncC" "rkmppenc" ] ++ lib.optional (nvenccForHost == null) "NVEncC";
+  uncheckedTools = [
+    "Akebi"
+    "VCEEncC"
+    "rkmppenc"
+  ]
+  ++ lib.optional (qsvenccForHost == null) "QSVEncC"
+  ++ lib.optional (nvenccForHost == null) "NVEncC";
 
   pythonManifest = src + "/server/pyproject.toml";
   pythonLock = src + "/server/uv.lock";
@@ -49,17 +55,32 @@ let
   # PyAV wheels bundle their own libav libraries. BS4K must also rebuild this
   # in-process reader; changing the external FFmpeg executable cannot affect it.
   bs4k = ffmpeg-headless.libaribtlvSupport or false;
-  mediaOverrides = final: prev: lib.optionalAttrs bs4k {
-    av = ((workspace.mkPyprojectOverlay {
-      sourcePreference = "sdist";
-      pythonVersion = python.pythonVersion;
-    }) final prev).av.overrideAttrs (old: {
-      nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkg-config ]
-        ++ final.resolveBuildSystem { setuptools = [ ]; cython = [ ]; };
-      buildInputs = (old.buildInputs or [ ]) ++ [ ffmpeg-headless ];
-      passthru = (old.passthru or { }) // { ffmpeg = ffmpeg-headless; };
-    });
-  };
+  mediaOverrides =
+    final: prev:
+    lib.optionalAttrs bs4k {
+      av =
+        (
+          (workspace.mkPyprojectOverlay {
+            sourcePreference = "sdist";
+            pythonVersion = python.pythonVersion;
+          })
+            final
+            prev
+        ).av.overrideAttrs
+          (old: {
+            nativeBuildInputs =
+              (old.nativeBuildInputs or [ ])
+              ++ [ pkg-config ]
+              ++ final.resolveBuildSystem {
+                setuptools = [ ];
+                cython = [ ];
+              };
+            buildInputs = (old.buildInputs or [ ]) ++ [ ffmpeg-headless ];
+            passthru = (old.passthru or { }) // {
+              ffmpeg = ffmpeg-headless;
+            };
+          });
+    };
   setuptoolsBuildSystemPackages = [
     "elevate"
     "grapheme"
@@ -204,7 +225,9 @@ stdenv.mkDerivation {
     # Skip the third-party encoders that this package does not provide.
     substituteInPlace KonomiTV.py \
       --replace-fail "    for library_name, library_path in LIBRARY_PATH.items():" \
-                     "    for library_name, library_path in LIBRARY_PATH.items():"$'\n'"        # Skip checks for tools not provided by this platform"$'\n'"        if library_name in ${lib.replaceStrings [ "\"" ] [ "'" ] (builtins.toJSON uncheckedTools)}:"$'\n'"            continue"
+                     "    for library_name, library_path in LIBRARY_PATH.items():"$'\n'"        # Skip checks for tools not provided by this platform"$'\n'"        if library_name in ${
+                       lib.replaceStrings [ "\"" ] [ "'" ] (builtins.toJSON uncheckedTools)
+                     }:"$'\n'"            continue"
 
     # Change uvicorn to listen on configurable host and use configured port directly
     substituteInPlace KonomiTV.py \
@@ -296,7 +319,7 @@ stdenv.mkDerivation {
   };
   passthru = {
     inherit pythonSet pythonEnv frontend;
-    inherit nvenccForHost uncheckedTools;
+    inherit qsvenccForHost nvenccForHost uncheckedTools;
     pythonVersion = python.pythonVersion;
   };
 }

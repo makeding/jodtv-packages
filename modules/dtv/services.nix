@@ -64,7 +64,7 @@ in
           type = types.port;
           default =
             if name == "port" then
-              20772
+              8888
             else if name == "socketioPort" then
               cfg.epgstation.listen.port + 1
             else
