@@ -98,6 +98,7 @@
           ];
         };
         edcb-wine = ./modules/edcb-wine;
+        casproxyserver = ./modules/casproxyserver.nix;
         hirakud = ./modules/hirakud.nix;
         honomitv = ./modules/honomitv;
         epgstation = ./modules/epgstation.nix;

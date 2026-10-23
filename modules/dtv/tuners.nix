@@ -155,6 +155,8 @@ let
       esac
       exec ${lib.getExe' cfg.packages.recisdb "recisdb"} tune --channel "$channel" "$@"
     '';
+  casProxyArgs = t: fourK:
+    lib.optionals (fourK && t.b61 && t.casProxy != null) [ "--cas-proxy" t.casProxy ];
   localCommand =
     t: fourK:
     if
@@ -195,6 +197,7 @@ let
       ++ lib.optional (fourK && t.b61) "--b61"
       ++ lib.optional (!t.strip) "--no-strip"
       ++ lib.optional (!(if fourK then t.b61 else t.b25)) "--no-decode"
+      ++ casProxyArgs t fourK
       ++ (if fourK then t.argsBS4K else t.args)
       ++ [ "-" ]
     else
@@ -219,6 +222,7 @@ let
           ]
       ++ lib.optional t.strip "--strip"
       ++ lib.optional (if fourK then t.b61 else t.b25) (if fourK then "--b61" else "--b25")
+      ++ casProxyArgs t fourK
       ++ (if fourK then t.argsBS4K else t.args)
       ++ [
         "<channel>"
@@ -351,6 +355,11 @@ in
     packages = lib.genAttrs [ "recisdb" "recdvb" "hiraku" "dantto4k" ] (
       name: lib.mkPackageOption pkgs name { }
     );
+    casProxy = mkOption {
+      type = types.nullOr nonEmpty;
+      default = null;
+      description = "Default CAS proxy host:port for local B61 capture; accepts another machine's dtv.exports.casProxy.";
+    };
     tuners = mkOption {
       default = [ ];
       description = "Shared tuner inventory. Omitted mode expands a PT3 card; explicit mode describes one tuner, and [] declares hardware only.";
@@ -403,6 +412,12 @@ in
                 type = types.bool;
                 default = true;
                 description = "Enable B61 decoding for local BS4K capture.";
+              };
+              casProxy = mkOption {
+                type = types.nullOr nonEmpty;
+                default = cfg.casProxy;
+                defaultText = lib.literalExpression "config.dtv.casProxy";
+                description = "CAS proxy for this local B61 tuner; null selects its local reader.";
               };
               lnb = mkOption {
                 type = types.bool;
@@ -501,7 +516,7 @@ in
     exports = mkOption {
       type = types.attrs;
       readOnly = true;
-      description = "Portable channel and tuner descriptions for another machine; endpoints and credentials are supplied by that consumer.";
+      description = "Portable channels, tuner descriptions and CAS proxy endpoint for another machine. Tuner relay endpoints and credentials are supplied by the consumer.";
     };
   };
   config = mkMerge [
@@ -590,6 +605,7 @@ in
           ''
         );
       dtv.exports = {
+        casProxy = config.services.casproxyserver.endpoint;
         channels = cfg.channels;
         hirakuTuners = map (t: {
           inherit (t) name mode;
