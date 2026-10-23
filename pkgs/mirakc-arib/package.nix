@@ -40,7 +40,10 @@ stdenv.mkDerivation rec {
     # The fetched tree has no .git directories; its vendored sources are pristine.
     substituteInPlace CMakeLists.txt --replace-fail 'git checkout -f && ' ""
     printf '#!/bin/sh\nprintf "source-archive\\n"\n' > scripts/tag-or-hash
-    patchShebangs scripts vendor/aribb24
+    # TSDuck's recursive make uses this shell for recipes and $(shell ...).
+    substituteInPlace vendor/tsduck-arib/Makefile.common \
+      --replace-fail '/bin/bash' '${stdenv.shell}'
+    patchShebangs scripts vendor/aribb24 vendor/tsduck-arib
   '';
 
   buildPhase = ''

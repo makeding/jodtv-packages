@@ -10,6 +10,8 @@ on:
       - 'overlay.nix'
       - 'scripts/build-common-deps.py'
       - 'scripts/test_build_common_deps.py'
+      - 'scripts/gc-caches.py'
+      - 'scripts/test_gc_caches.py'
       - '.github/workflows/build-packages.yml'
   # GITHUB_TOKEN pushes from the updater do not trigger push workflows.
   workflow_run:
@@ -120,3 +122,45 @@ jobs:
         env:
           PACKAGE: ${{ matrix.package }}
         run: nix build --impure --no-link --print-build-logs ".#packages.x86_64-linux.${PACKAGE}"
+
+  gc:
+    name: Prune obsolete CI caches
+    needs: [prepare, build]
+    # An empty matrix is valid when prepare built every root as shared work.
+    if: >-
+      !cancelled() &&
+      needs.prepare.result == 'success' &&
+      (needs.build.result == 'success' ||
+       (needs.build.result == 'skipped' && needs.prepare.outputs.packages == '[]')) &&
+      github.ref_name == github.event.repository.default_branch &&
+      (github.event_name != 'workflow_dispatch' || inputs.packages == '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.prepare.outputs.revision }}
+          persist-credentials: false
+
+      - uses: cachix/install-nix-action@d9186cbdca7adedf113a159fa91f725a27866771 # v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            max-jobs = 1
+            cores = 2
+
+      - name: Check cache retention
+        run: python3 -B -m unittest discover -s scripts -p test_gc_caches.py
+
+      - name: Prune caches after the complete build and uploads succeeded
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_GC_AUTH_TOKEN || secrets.CACHIX_AUTH_TOKEN }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          BUILT_REVISION: ${{ needs.prepare.outputs.revision }}
+        run: >-
+          python3 -B scripts/gc-caches.py --apply
+          --branch "$DEFAULT_BRANCH" --revision "$BUILT_REVISION"
