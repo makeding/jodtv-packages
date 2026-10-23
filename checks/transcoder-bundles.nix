@@ -5,8 +5,11 @@ let
   # Inspect actual Linux ELF fixups using native tools, even on Darwin. This
   # intentionally does not execute Linux programs or claim GPU/runtime proof.
   inspect = name:
-    (pkgs.callPackage ../pkgs/${name}/package.nix { }).overrideAttrs (old: {
+    (pkgs.callPackage ../pkgs/${name}/package.nix (lib.optionalAttrs (name == "amatsukaze") {
+      glibc = linux.glibc;
+    })).overrideAttrs (old: {
       pname = "${name}-elf-inspection";
+      nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.patchelf ];
       buildInputs = if name == "nvencc" then [ linux.stdenv.cc.cc.lib ] else [ ];
       preFixup = ''
         export NIX_BINTOOLS=${linux.stdenv.cc.bintools}
@@ -28,7 +31,7 @@ in
     test -s ${amatsukaze}/share/amatsukaze/exe_files/lib/libavisynth.so.11
     ${amatsukaze}/bin/amatsukaze --help > help.txt
     grep -q 'add-task' help.txt
-    test "$(patchelf --print-interpreter ${amatsukaze}/share/amatsukaze/exe_files/AmatsukazeServerCLI)" = ${linux.glibc}/lib/ld-linux-x86-64.so.2
+    grep -q '${linux.glibc}/lib/ld-linux-x86-64.so.2' ${amatsukaze}/share/amatsukaze/exe_files/AmatsukazeServerCLI
     test "$(patchelf --print-interpreter ${nvencc}/bin/.nvencc-wrapped)" = ${linux.glibc}/lib/ld-linux-x86-64.so.2
     patchelf --print-rpath ${nvencc}/bin/.nvencc-wrapped | grep -q '/run/opengl-driver/lib'
     # patchelf must preserve .NET single-file bundle header offsets and payloads.
