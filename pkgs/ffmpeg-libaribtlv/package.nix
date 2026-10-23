@@ -28,13 +28,14 @@ in
       hash = "sha256-wJ3c8VVo/tK84K7bKYs/UWcln4mSO+tf/w5NLNjKhiI=";
     };
   };
-}).overrideAttrs (old: {
-  meta = old.meta // {
-    description = "FFmpeg for ARIB TLV (MMTS) support";
-    homepage = "https://github.com/makeding/ffmpeg-libaribtlv";
-    maintainers = [ lib.maintainers.huggy ];
-  };
-  passthru = (old.passthru or { }) // {
-    inherit patchset;
-  };
-})
+}).overrideAttrs
+  (old: {
+    meta = old.meta // {
+      description = "FFmpeg for ARIB TLV (MMTS) support";
+      homepage = "https://github.com/makeding/ffmpeg-libaribtlv";
+      maintainers = [ lib.maintainers.huggy ];
+    };
+    passthru = (old.passthru or { }) // {
+      inherit patchset;
+    };
+  })

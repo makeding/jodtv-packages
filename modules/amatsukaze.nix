@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.amatsukaze;
 in
@@ -40,15 +45,23 @@ in
         message = "Amatsukaze's Linux release is only packaged for x86_64-linux.";
       }
       {
-        assertion = builtins.all (path: lib.hasPrefix "/" path && !lib.hasInfix "\n" path) cfg.mediaDirectories;
+        assertion = builtins.all (
+          path: lib.hasPrefix "/" path && !lib.hasInfix "\n" path
+        ) cfg.mediaDirectories;
         message = "services.amatsukaze.mediaDirectories must be absolute paths without newlines.";
       }
     ];
-    networking.firewall.allowedTCPPorts = lib.optionals cfg.openFirewall [ cfg.port (cfg.port + 1) ];
+    networking.firewall.allowedTCPPorts = lib.optionals cfg.openFirewall [
+      cfg.port
+      (cfg.port + 1)
+    ];
     users.users.amatsukaze = {
       isSystemUser = true;
       group = "amatsukaze";
-      extraGroups = [ "video" "render" ];
+      extraGroups = [
+        "video"
+        "render"
+      ];
     };
     users.groups.amatsukaze = { };
     systemd.services.amatsukaze = {
@@ -64,11 +77,17 @@ in
         StateDirectory = "amatsukaze";
         StateDirectoryMode = "0700";
         WorkingDirectory = "/var/lib/amatsukaze";
-        ExecStart = lib.escapeShellArgs ([
-          "${cfg.package}/bin/amatsukaze"
-          "--state-dir" "/var/lib/amatsukaze"
-          "server" "-p" (toString cfg.port)
-        ] ++ cfg.extraArgs);
+        ExecStart = lib.escapeShellArgs (
+          [
+            "${cfg.package}/bin/amatsukaze"
+            "--state-dir"
+            "/var/lib/amatsukaze"
+            "server"
+            "-p"
+            (toString cfg.port)
+          ]
+          ++ cfg.extraArgs
+        );
         Restart = "on-failure";
         RestartSec = "5s";
         TimeoutStopSec = 120;

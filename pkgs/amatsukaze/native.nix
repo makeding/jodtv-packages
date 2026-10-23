@@ -17,8 +17,20 @@
 stdenv.mkDerivation {
   pname = "amatsukaze-native";
   inherit version src;
-  nativeBuildInputs = [ meson ninja pkg-config python3 ];
-  buildInputs = [ ffmpeg avisynthplus libjpeg_turbo libaribcaption fontconfig zlib ];
+  nativeBuildInputs = [
+    meson
+    ninja
+    pkg-config
+    python3
+  ];
+  buildInputs = [
+    ffmpeg
+    avisynthplus
+    libjpeg_turbo
+    libaribcaption
+    fontconfig
+    zlib
+  ];
   postPatch = ''
     python - <<'PY'
     from pathlib import Path
@@ -35,7 +47,9 @@ stdenv.mkDerivation {
     text = text[:start] + "aribcaption_dep = dependency('libaribcaption', required: true)\n\n" + text[end:]
     text = text.replace("dependency('zlib', required : true, static : true)", "dependency('zlib', required : true)")
     path.write_text(text)
-    Path('Version.h.in').write_text('#define AMATSUKAZE_VERSION "${version}"\n#define AMATSUKAZE_PRODUCTVERSION ${lib.replaceStrings [ "." ] [ "," ] version}\n')
+    Path('Version.h.in').write_text('#define AMATSUKAZE_VERSION "${version}"\n#define AMATSUKAZE_PRODUCTVERSION ${
+      lib.replaceStrings [ "." ] [ "," ] version
+    }\n')
     PY
   '';
   doCheck = true;
@@ -43,7 +57,10 @@ stdenv.mkDerivation {
     # --loadv2 chooses this filename; both paths must use the selected libav.
     ln -s libAmatsukaze.so "$out/lib/libAmatsukaze2.so"
   '';
-  passthru = { inherit ffmpeg; compilerRuntime = stdenv.cc.cc.lib; };
+  passthru = {
+    inherit ffmpeg;
+    compilerRuntime = stdenv.cc.cc.lib;
+  };
   meta = {
     description = "Amatsukaze native engines rebuilt against the selected FFmpeg";
     homepage = "https://github.com/rigaya/Amatsukaze";

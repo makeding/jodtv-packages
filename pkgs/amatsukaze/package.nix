@@ -34,7 +34,10 @@ let
       fetchSubmodules = true;
     };
   };
-  mp4box = gpac.override { ffmpeg-headless = ffmpeg; withFfmpeg = true; };
+  mp4box = gpac.override {
+    ffmpeg-headless = ffmpeg;
+    withFfmpeg = true;
+  };
   fonts = writeText "amatsukaze-fonts.conf" ''
     <?xml version="1.0"?>
     <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
@@ -53,7 +56,10 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     hash = "sha256-WBG5QCndaTb1IseRnVbVZiYca7N8p2h2gzTo6ifyszU=";
   };
 
-  nativeBuildInputs = [ autoPatchelfHook makeWrapper ];
+  nativeBuildInputs = [
+    autoPatchelfHook
+    makeWrapper
+  ];
   sourceRoot = ".";
   dontConfigure = true;
   dontBuild = true;
@@ -82,7 +88,12 @@ stdenvNoCC.mkDerivation (finalAttrs: {
       --set FONTCONFIG_FILE ${fonts} \
       --set AMT_ENABLE_SELF_UPDATE 0 \
       --set DOTNET_SYSTEM_GLOBALIZATION_APPLOCALICU 76.1 \
-      --prefix LD_LIBRARY_PATH : "$out/share/amatsukaze/exe_files/lib:${lib.makeLibraryPath [ zlib krb5 ]}:${addDriverRunpath.driverLink}/lib" \
+      --prefix LD_LIBRARY_PATH : "$out/share/amatsukaze/exe_files/lib:${
+        lib.makeLibraryPath [
+          zlib
+          krb5
+        ]
+      }:${addDriverRunpath.driverLink}/lib" \
       --set OPENSSL_MODULES "$out/share/amatsukaze/exe_files/lib/ossl-modules"
     makeWrapper "$out/bin/amatsukaze" "$out/bin/amatsukaze-cli" --add-flags cli
     makeWrapper "$out/bin/amatsukaze" "$out/bin/amatsukaze-add-task" --add-flags add-task
@@ -99,7 +110,8 @@ stdenvNoCC.mkDerivation (finalAttrs: {
         --subst-var-by glibc ${glibc}
       chmod +x "$out/share/amatsukaze/exe_files/$program"
     done
-  '' + lib.optionalString bs4k ''
+  ''
+  + lib.optionalString bs4k ''
     # Replace every bundled libav consumer, including the --loadv2 engine.
     rm "$out/share/amatsukaze/exe_files/"{libAmatsukaze.so,libAmatsukaze2.so,AmatsukazeCLI,AmatsukazeGenLogo,tsreplace,MP4Box}
     for library in libAmatsukaze.so libAmatsukaze2.so; do
@@ -115,7 +127,10 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     ln -s ${sourceBuild.compilerRuntime}/lib/libgcc_s.so.1 "$out/share/amatsukaze/exe_files/lib/libgcc_s.so.1"
   '';
 
-  passthru = { inherit sourceBuild bs4k; } // lib.optionalAttrs bs4k {
+  passthru = {
+    inherit sourceBuild bs4k;
+  }
+  // lib.optionalAttrs bs4k {
     inherit mp4box tsreplace;
   };
 
