@@ -54,6 +54,8 @@ def initialize(template, state, recording, info, host, port):
         if not source.is_file():
             continue
         relative = source.relative_to(template)
+        if relative.parts[0] == "bin":
+            continue
         destination = target / relative
         owned = managed(relative)
         if owned:

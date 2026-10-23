@@ -33,6 +33,8 @@ class StateTests(unittest.TestCase):
         (self.source / "old.dll").write_bytes(b"old")
         (self.source / "HttpPublic/index.html").write_text("web-v1")
         (self.source / "Setting/Reserve.txt").write_text("initial")
+        (self.source / "bin").mkdir()
+        (self.source / "bin/edcb-wine").write_text("desktop launcher")
 
     def initialize(self, source=None, host="tuner.example", port=40773):
         runtime.initialize(source or self.source, self.state, ROOT / "recordings", ROOT / "info", host, port)
@@ -40,6 +42,7 @@ class StateTests(unittest.TestCase):
     def test_seed_and_idempotent_restart(self):
         self.initialize()
         target = self.state / "EDCB"
+        self.assertFalse((target / "bin").exists())
         common, _ = runtime.read_ini(target / "Common.ini")
         self.assertIn(runtime.windows_path(ROOT / "recordings"), common)
         self.assertIn(runtime.windows_path(ROOT / "info"), common)

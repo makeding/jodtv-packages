@@ -258,6 +258,23 @@ GR と衛星モードの混在は評価時に拒否します。2 つのチュー
 
 ## EDCB on Wine
 
+x86_64 Linux のデスクトップでは、Wine と日本語フォントを含むランチャーで起動できます。
+
+```sh
+nix run .#edcb-wine
+nix run .#edcb-wine -- scan-gr
+nix run .#edcb-wine -- scan-bs
+nix run .#edcb-wine -- capture
+nix run .#edcb-wine -- --backend-host tuner.example --backend-port 40772
+```
+
+X11 / XWayland が必要です。データは `~/.local/share/edcb-wine`
+（`XDG_DATA_HOME` 対応）に保存し、`--state-dir` で変更できます。初回に設定・
+録画先・専用 Wine prefix を作成し、指定したバックエンドを次回も使用します。
+EMWUI は `http://localhost:5510/EMWUI/` です。詳細は `--help` を参照してください。
+unfree が未許可の場合は `NIXPKGS_ALLOW_UNFREE=1 nix run --impure .#edcb-wine`
+で実行できます。
+
 `nixosModules.edcb-wine`（default モジュールにも同梱）で、x86_64 Linux 上の
 EDCB 260921 / BonDriver_mirakc / EMWUI と Xvfb/Openbox デスクトップを利用できます。
 パッケージ overlay とモジュールを import した後、次のように有効化します。

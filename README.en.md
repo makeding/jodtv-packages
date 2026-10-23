@@ -53,6 +53,24 @@ An output's presence is not a claim that it was built on that platform. HonomiTV
 
 ## EDCB under Wine
 
+On an x86_64 Linux desktop, run EDCB directly with bundled Wine and Japanese fonts:
+
+```sh
+nix run .#edcb-wine
+nix run .#edcb-wine -- scan-gr
+nix run .#edcb-wine -- scan-bs
+nix run .#edcb-wine -- capture
+nix run .#edcb-wine -- --backend-host tuner.example --backend-port 40772
+```
+
+An X11 display (or XWayland) is required. State defaults to
+`~/.local/share/edcb-wine` (respects `XDG_DATA_HOME`); use `--state-dir` to change
+it. The first run initializes configuration, recordings and an isolated Wine
+prefix. Explicit backend choices persist. EMWUI is at
+`http://localhost:5510/EMWUI/`. Use `--help` for commands and options.
+If your Nix configuration does not permit the unfree bundle, run
+`NIXPKGS_ALLOW_UNFREE=1 nix run --impure .#edcb-wine`.
+
 `nixosModules.edcb-wine` (also included in the default module) provides an
 optional x86_64 Linux service with EDCB 260921, BonDriver_mirakc, EMWUI and an
 Xvfb/Openbox desktop. Import the package overlay and module, then enable it:

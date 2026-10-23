@@ -4,6 +4,9 @@
   fetchurl,
   fetchFromGitHub,
   unzip,
+  callPackage,
+  wineWow64Packages,
+  winePackage ? wineWow64Packages.stable,
 }:
 let
   edcbZip = fetchurl {
@@ -15,6 +18,9 @@ let
     repo = "EDCB-Wine";
     rev = "c41c6aa0c038caa57131f00c746cc23367b86b5d";
     hash = "sha256-Luv82DGMrvZMClmV3+wkvS5EgbyWXhtXj+Ix02NQLcA=";
+  };
+  launcher = callPackage ./launcher.nix {
+    wine = winePackage;
   };
 in
 stdenvNoCC.mkDerivation rec {
@@ -60,9 +66,10 @@ stdenvNoCC.mkDerivation rec {
     cp ${edcbWineSrc}/EDCB/EpgTimerSrv.example.ini "$out/EpgTimerSrv.example.ini"
     cp -a ${edcbWineSrc}/EDCB/BonDriver/. "$out/BonDriver/"
     chmod -R a+rX "$out"
+    install -Dm755 ${launcher} "$out/bin/edcb-wine"
   '';
 
-  passthru = { inherit edcbZip edcbWineSrc; };
+  passthru = { inherit edcbZip edcbWineSrc launcher; };
   meta = {
     description = "EDCB x64 with BonDriver_mirakc for Wine";
     homepage = "https://github.com/tsukumijima/EDCB-Wine";
@@ -70,5 +77,6 @@ stdenvNoCC.mkDerivation rec {
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
     platforms = [ "x86_64-linux" ];
     maintainers = [ lib.maintainers.huggy ];
+    mainProgram = "edcb-wine";
   };
 }
