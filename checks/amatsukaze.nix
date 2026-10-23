@@ -34,7 +34,7 @@ in
     assert custom.networking.firewall.allowedTCPPorts == [ 32770 32771 ];
     assert custom.systemd.services.amatsukaze.serviceConfig.ReadWritePaths == [ "/srv/recordings" "/srv/encoded" ];
     assert builtins.all (item: item.assertion) custom.assertions;
-    assert lib.hasInfix "'server' '-p' '32770'" custom.systemd.services.amatsukaze.serviceConfig.ExecStart;
+    assert lib.hasInfix "server -p 32770" custom.systemd.services.amatsukaze.serviceConfig.ExecStart;
     assert self.packages.x86_64-linux.amatsukaze.meta.mainProgram == "amatsukaze";
     assert self.packages.x86_64-linux.nvencc.meta.mainProgram == "nvencc";
     assert !(self.packages.aarch64-linux ? amatsukaze);

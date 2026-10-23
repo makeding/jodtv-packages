@@ -31,7 +31,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     runHook preInstall
     mkdir -p "$out/bin" "$out/share"
     cp usr/bin/nvencc "$out/bin/nvencc"
-    cp -r usr/share/. "$out/share/"
+    if test -d usr/share; then cp -r usr/share/. "$out/share/"; fi
     runHook postInstall
   '';
 
