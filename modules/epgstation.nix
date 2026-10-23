@@ -7,11 +7,25 @@
 
 let
   cfg = config.services.epgstation;
+  databasePasswordFile = "/var/lib/epgstation-db-password";
   externalUpdater = (cfg.settings.epgUpdaterMode or "fork") == "external";
 in
 
 {
-  config = lib.mkIf (cfg.enable && externalUpdater) {
+  config = lib.mkMerge [
+    (lib.mkIf cfg.enable {
+      services.epgstation.database.passwordFile = lib.mkDefault databasePasswordFile;
+      services.mysql.settings.mysqld.bind-address = lib.mkDefault "127.0.0.1";
+      system.activationScripts.epgstationDatabasePassword =
+        lib.mkIf (cfg.database.passwordFile == databasePasswordFile) {
+          text = ''
+            if [ ! -e ${databasePasswordFile} ]; then
+              (umask 077; ${pkgs.openssl}/bin/openssl rand -hex 32 > ${databasePasswordFile})
+            fi
+          '';
+        };
+    })
+    (lib.mkIf (cfg.enable && externalUpdater) {
     systemd.services.epgstation-epg-update = {
       description = "Update EPGStation EPG once";
       wants = [
@@ -48,5 +62,6 @@ in
         Unit = "epgstation-epg-update.service";
       };
     };
-  };
+    })
+  ];
 }
