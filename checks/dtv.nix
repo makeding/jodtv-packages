@@ -452,10 +452,19 @@ let
   captureRecorder = pkgs.writeShellScriptBin "recisdb" ''
     printf '%s\n' "$@"
   '';
+  casProvider = configOf {
+    services.casproxyserver = {
+      enable = true;
+      settings.listenIp = "192.0.2.10";
+      settings.port = 24001;
+      settings.allowedIps = [ "192.0.2.0/24" ];
+    };
+  };
   captureConfig = configOf {
     # Exercise generated scripts on the check host, without tuner hardware.
     nixpkgs.overlays = [ (_final: _prev: { inherit (pkgs) writeShellScript; }) ];
     dtv.packages.recisdb = captureRecorder;
+    dtv.casProxy = casProvider.dtv.exports.casProxy;
     dtv.mirakurun.enable = true;
     dtv.hirakud.enable = true;
     dtv.tuners = [
@@ -475,10 +484,6 @@ let
         device = "0";
         serve.mode = "PT4K";
         serve.modeBS4K = "PT4K4K";
-        argsBS4K = [
-          "--cas-proxy"
-          "192.168.6.253:24000"
-        ];
       }
       {
         name = "raw";
@@ -500,6 +505,7 @@ let
   dvbCaptureConfig = configOf {
     nixpkgs.overlays = [ (_final: _prev: { inherit (pkgs) writeShellScript; }) ];
     dtv.packages.recdvb = dvbCaptureRecorder;
+    dtv.casProxy = casProvider.dtv.exports.casProxy;
     dtv.mirakurun.enable = true;
     dtv.hirakud.enable = true;
     dtv.tuners = [
@@ -517,10 +523,13 @@ let
           "--sid"
           "101,102"
         ];
-        argsBS4K = [
-          "--cas-proxy"
-          "proxy.example:24000"
-        ];
+      }
+      {
+        name = "DVB-local";
+        driver = "dvb";
+        mode = [ "BS4K" ];
+        device = "4";
+        casProxy = null;
       }
       {
         name = "DVB-raw";
@@ -749,9 +758,12 @@ let
     && require "PT4K exclusive modes" pt4kModesContract;
 in
 {
-  recdvb-capture = pkgs.runCommand "recdvb-capture" { } ''
+  recdvb-capture =
+    assert !dvbCaptureConfig.services.casproxyserver.enable;
+    assert !dvbCaptureConfig.services.pcscd.enable;
+    pkgs.runCommand "recdvb-capture" { } ''
     test "$(${runDvbCapture "DVB" "BS15_0"})" = "$(printf '%s\n' --dev 2 --lnb 15 --strip --b25 --sid 101,102 BS15_0 - -)"
-    test "$(${runDvbCapture "DVB-BS4K" "BS17_0"})" = "$(printf '%s\n' --dev 2 --lnb 15 --strip --b61 --cas-proxy proxy.example:24000 BS17_0 - -)"
+    test "$(${runDvbCapture "DVB-BS4K" "BS17_0"})" = "$(printf '%s\n' --dev 2 --lnb 15 --strip --b61 --cas-proxy 192.0.2.10:24001 BS17_0 - -)"
     test "$(${runDvbCapture "DVB-raw" "BS15_0"})" = "$(printf '%s\n' --dev 3 BS15_0 - -)"
     test "$(${runDvbCapture "DVB-raw-BS4K" "BS17_0"})" = "$(printf '%s\n' --dev 3 BS17_0 - -)"
     test "$(${
@@ -761,12 +773,13 @@ in
     test "$(${
       lib.replaceStrings [ "<channel>" ] [ "BS17_0" ]
         (builtins.head dvbCaptureConfig.services.mirakurun.tunerSettings).commandBS4K
-    })" = "$(printf '%s\n' --dev 2 --lnb 15 --strip --b61 --cas-proxy proxy.example:24000 BS17_0 - -)"
+    })" = "$(printf '%s\n' --dev 2 --lnb 15 --strip --b61 --cas-proxy 192.0.2.10:24001 BS17_0 - -)"
+    test "$(${runDvbCapture "DVB-local-BS4K" "BS17_0"})" = "$(printf '%s\n' --dev 4 --strip --b61 BS17_0 - -)"
     touch $out
   '';
   recisdb-capture = pkgs.runCommand "recisdb-capture" { } ''
     test "$(${runCapture "PT4K" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/dvb/adapter0/frontend0 --lnb 15v -)"
-    test "$(${runCapture "PT4K4K" "BS17_0"})" = "$(printf '%s\n' tune --channel BS17_0 --device /dev/dvb/adapter0/frontend0 --lnb 15v --b61 --cas-proxy 192.168.6.253:24000 -)"
+    test "$(${runCapture "PT4K4K" "BS17_0"})" = "$(printf '%s\n' tune --channel BS17_0 --device /dev/dvb/adapter0/frontend0 --lnb 15v --b61 --cas-proxy 192.0.2.10:24001 -)"
     test "$(${runCapture "PT3-T1" "13"})" = "$(printf '%s\n' tune --channel T13 --device /dev/pt3video2 -)"
     test "$(${runCapture "PT3-T1" "T27"})" = "$(printf '%s\n' tune --channel T27 --device /dev/pt3video2 -)"
     test "$(${runCapture "PT3-T1" "C13"})" = "$(printf '%s\n' tune --channel C13 --device /dev/pt3video2 -)"

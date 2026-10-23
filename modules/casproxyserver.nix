@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.casproxyserver;
   format = pkgs.formats.yaml { };
@@ -18,10 +23,14 @@ in
       type = lib.types.nullOr lib.types.str;
       readOnly = true;
       default =
-        if !cfg.enable then null
-        else if cfg.advertiseAddress == null || cfg.advertiseAddress == "" || cfg.advertiseAddress == "0.0.0.0" then
+        if !cfg.enable then
+          null
+        else if
+          cfg.advertiseAddress == null || cfg.advertiseAddress == "" || cfg.advertiseAddress == "0.0.0.0"
+        then
           throw "Set services.casproxyserver.advertiseAddress to a reachable address before referencing its endpoint."
-        else "${cfg.advertiseAddress}:${toString cfg.settings.port}";
+        else
+          "${cfg.advertiseAddress}:${toString cfg.settings.port}";
       description = "Exported client endpoint, or null when the service is disabled.";
     };
     keepPcscdRunning = lib.mkOption {
@@ -64,8 +73,14 @@ in
     systemd.services.casproxyserver = {
       description = "PC/SC smart card proxy server";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network-online.target" "pcscd.service" ];
-      wants = [ "network-online.target" "pcscd.service" ];
+      after = [
+        "network-online.target"
+        "pcscd.service"
+      ];
+      wants = [
+        "network-online.target"
+        "pcscd.service"
+      ];
       restartTriggers = [ config.environment.etc."casproxyserver.yml".source ];
       serviceConfig = {
         ExecStart = "${lib.getExe cfg.package} /etc/casproxyserver.yml";
@@ -77,7 +92,10 @@ in
         PrivateTmp = true;
         ProtectHome = true;
         ProtectSystem = "strict";
-        RestrictAddressFamilies = [ "AF_UNIX" "AF_INET" ];
+        RestrictAddressFamilies = [
+          "AF_UNIX"
+          "AF_INET"
+        ];
       };
     };
 
