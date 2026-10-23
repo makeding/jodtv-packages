@@ -5,6 +5,7 @@
   cmake,
   pkg-config,
   asio,
+  openssl,
   pcsclite,
 }:
 
@@ -24,6 +25,7 @@ stdenv.mkDerivation {
     pkg-config
   ];
   buildInputs = [ asio ] ++ lib.optionals stdenv.hostPlatform.isLinux [ pcsclite ];
+  propagatedBuildInputs = [ openssl ];
   # Nix supplies absolute GNUInstallDirs paths; avoid prefixing them twice.
   postPatch = ''
     substituteInPlace libaribb61.pc.in \
