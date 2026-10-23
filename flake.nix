@@ -68,6 +68,7 @@
             "ffmpeg-libaribtlv"
           ];
           x86Only = [
+            "edcb-wine"
             "honomitv"
             "konomitv"
             "intel-media-sdk-h"
@@ -92,9 +93,11 @@
           imports = with self.nixosModules; [
             packages
             dtv
+            edcb-wine
             honomitv
           ];
         };
+        edcb-wine = ./modules/edcb-wine;
         hirakud = ./modules/hirakud.nix;
         honomitv = ./modules/honomitv;
         epgstation = ./modules/epgstation.nix;

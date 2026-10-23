@@ -44,12 +44,33 @@ remain private to the module interface rather than exporting binaries tied to
 a different kernel.
 
 `packages.x86_64-linux` exposes the full package set. The aarch64-linux output
-omits HonomiTV/KonomiTV and Intel encoding packages until their ARM packaging is
+omits EDCB-Wine, HonomiTV/KonomiTV and Intel encoding packages until their ARM packaging is
 validated. The aarch64-darwin output contains Hiraku, libaribb61, libaribtlv, PSI/SI tools,
 tsreadex, tsreplace and the FFmpeg patchset. Output lists are explicit to keep
 source-dependent packages from forcing evaluation of unrelated tools.
 An output's presence is not a claim that it was built on that platform. HonomiTV and the FFmpeg patchset require source-dependent evaluation;
 `--option allow-import-from-derivation false` reports those requirements explicitly.
+
+## EDCB under Wine
+
+`nixosModules.edcb-wine` (also included in the default module) provides an
+optional x86_64 Linux service with EDCB 260921, BonDriver_mirakc, EMWUI and an
+Xvfb/Openbox desktop. Import the package overlay and module, then enable it:
+
+```nix
+services.edcb-wine = {
+  enable = true;
+  backend.host = "localhost"; # Mirakurun or mirakc
+  backend.port = 40772;
+};
+```
+
+VNC listens on `127.0.0.1:5900`; forward it with SSH. EMWUI is at
+`http://HOST:5510/EMWUI/`. Set `openFirewall = true` to open EDCB's ports.
+The mixed binary bundle is conservatively marked unfree; permit `edcb-wine`
+in the consumer's Nixpkgs policy. Program upgrades preserve user configuration,
+channel scans, reservations and history. See [packaging and validation](docs/edcb-wine-packaging.md)
+for storage options and runtime acceptance limits.
 
 ## Consumer overrides
 

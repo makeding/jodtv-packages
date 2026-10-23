@@ -3,6 +3,7 @@
   a865r-firmware = callPackage ./a865r-firmware/package.nix { };
   casproxyserver = callPackage ./casproxyserver/package.nix { };
   dantto4k = callPackage ./dantto4k/package.nix { };
+  edcb-wine = callPackage ./edcb-wine/package.nix { };
   epgstation-h = callPackage ./epgstation-h/package.nix { };
   epgstation-upstream = callPackage ./epgstation-upstream/package.nix { };
   ffmpeg-libaribtlv = callPackage ./ffmpeg-libaribtlv/package.nix { };

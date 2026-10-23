@@ -255,3 +255,24 @@ Linux/macOS 向けの独立した MMT/TLV ACAS デスクランブルライブラ
 
 TBS6812 の各物理チューナーは GR と BS/CS/BS4K を排他的に設定します。
 GR と衛星モードの混在は評価時に拒否します。2 つのチューナーは個別に選択できます。
+
+## EDCB on Wine
+
+`nixosModules.edcb-wine`（default モジュールにも同梱）で、x86_64 Linux 上の
+EDCB 260921 / BonDriver_mirakc / EMWUI と Xvfb/Openbox デスクトップを利用できます。
+パッケージ overlay とモジュールを import した後、次のように有効化します。
+
+```nix
+services.edcb-wine = {
+  enable = true;
+  backend.host = "localhost"; # Mirakurun / mirakc
+  backend.port = 40772;
+};
+```
+
+VNC は `127.0.0.1:5900` に待ち受けます。SSH ポート転送で接続してください。
+EMWUI は `http://HOST:5510/EMWUI/` です。`openFirewall = true` で EDCB の
+ポートを開放します。バイナリ一式は保守的に unfree として扱うため、利用側の
+Nixpkgs ポリシーで `edcb-wine` を許可してください。更新時も INI・チャンネル・
+予約・履歴を保持します。保存先や検証範囲は
+[パッケージ仕様](docs/edcb-wine-packaging.md)を参照してください。

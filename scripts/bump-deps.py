@@ -19,7 +19,7 @@ RELEASES = {"mirakc", "mirakc-arib", "intel-media-sdk-h", "qsvencc", "psisimux",
 SUBPACKAGES = {"honomitv": "frontend", "konomitv": "frontend",
                "epgstation-h": "clientDir", "epgstation-upstream": "clientDir"}
 ALIASES = {"epgstation": "epgstation-h"}
-EXCLUDED = {"ffmpeg-libaribtlv"}
+EXCLUDED = {"ffmpeg-libaribtlv", "edcb-wine"}
 MANIFESTS = {
     "epgstation-h": ("package.json", "json"),
     "epgstation-upstream": ("package.json", "json"),

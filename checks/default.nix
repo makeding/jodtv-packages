@@ -134,8 +134,7 @@ in
     assert (public.recdvb.override { withB25 = false; }).configureFlags == [ "--enable-b61" ];
     assert (public.recdvb.override { withB61 = false; }).configureFlags == [ "--enable-b25" ];
     assert
-      !pkgs.stdenv.hostPlatform.isLinux
-      || hasInput public.recisdb (lib.getDev public.recisdb.libdvbv5);
+      !pkgs.stdenv.hostPlatform.isLinux || hasInput public.recisdb (lib.getDev public.recisdb.libdvbv5);
     assert public.recisdb.buildNoDefaultFeatures;
     assert
       public.recisdb.buildFeatures == (
@@ -151,3 +150,4 @@ in
 // import ./dtv.nix { inherit self nixpkgs pkgs; }
 // import ./honomitv.nix { inherit pkgs; }
 // import ./upstream.nix { inherit self nixpkgs pkgs; }
+// import ./edcb-wine.nix { inherit self nixpkgs pkgs; }
