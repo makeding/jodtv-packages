@@ -32,7 +32,10 @@ dtv.hirakud.enable = true;
 `nixosModules.default` は overlay とすべてのサービスモジュールをまとめて読み込みます。
 各サービスは初期状態では無効です。
 Mirakurun は nixpkgs の NixOS モジュールを利用し、EPGStation はそのモジュールを
-拡張して外部 EPG 更新プロセスに対応しています。
+拡張してデータベースのパスワード初期化と外部 EPG 更新プロセスに対応しています。
+ローカルの Mirakurun を設定済みなら、`dtv.epgstation.enable = true;` で有効にできます。
+パスワードは初回の activation 時に生成されます。明示した `database.passwordFile` と
+既存のデータ・認証情報は維持されます。
 
 チューナーモジュールは利用先の `boot.kernelPackages` に合わせてドライバーをビルドします。
 カーネル、チャンネル一覧、ネットワーク、ストレージ、ホスト固有のモジュールパラメーターは

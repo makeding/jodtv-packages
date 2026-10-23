@@ -31,7 +31,10 @@ reachable from B. A retains control of its allowlist and firewall.
 
 EPGStation's existing NixOS module already manages MariaDB startup, database
 creation and password provisioning; hosts need not duplicate `initialDatabases`
-or `ensureUsers`. Existing data and credentials are retained. See
+or `ensureUsers`. With local Mirakurun configured, enable it with
+`dtv.epgstation.enable = true;`. The module generates a private database password
+once during activation; an explicit `database.passwordFile` remains unchanged.
+Existing data and credentials are retained. See
 [service ownership](docs/service-ownership.md) for the contract and validation.
 
 [日本語](README.md) | **English**
@@ -65,7 +68,7 @@ To use packages without modules, add `inputs.jodtv-packages.overlays.default` to
 `nixpkgs.overlays`. The default module includes the overlay and all service
 modules with services off.
 Mirakurun uses the upstream NixOS module; the EPGStation module extends the
-upstream service with support for the external EPG updater.
+upstream service with database password initialization and the external EPG updater.
 
 The tuner module builds drivers against the consuming system's
 `boot.kernelPackages`. It does not choose a kernel, channel map, networking,
