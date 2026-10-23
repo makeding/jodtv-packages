@@ -10,13 +10,13 @@
 
 stdenv.mkDerivation {
   pname = "libaribb61";
-  version = "0.1.0-unstable-2026-10-22";
+  version = "0.1.0-unstable-2026-10-23";
 
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "libaribb61";
-    rev = "dd1e079e2c4e0f13afa6ac3e2e45489309bb8efc";
-    hash = "sha256-xwmWAMzf+1G8ktuPf4BSLpD5NejpHOhBkPPlOu71LgI=";
+    rev = "40c43dd5a7d3405717653b3e42034738bd68f81e";
+    hash = "sha256-0ECyTyKZvRsMfFmeGkg/tbQha98TGO5drHrGFfNknC0=";
   };
 
   nativeBuildInputs = [
