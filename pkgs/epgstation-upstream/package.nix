@@ -15,12 +15,12 @@ callPackage ../epgstation-h/build.nix (
   // {
     readmeFile = "README.md";
     documentationDir = "docs";
-    version = "3.0.0-beta2-unstable-2026-10-14";
+    version = "3.0.0-beta3-unstable-2026-10-23";
     src = fetchFromGitHub {
       owner = "l3tnun";
       repo = "EPGStation";
-      rev = "1793ab74088be8791d191c9621ab881e50741119";
-      hash = "sha256-AAh1BtEEt/KQHFH5gDyfmFs5bdJjKj5GUxrXyF2/2O0=";
+      rev = "26e0105697a055595d1967e2b680cd8b9fb23870";
+      hash = "sha256-tNcOSIq7cdcnaCvSAoqfkKkmbVdTup8FsDvNqH1W+cM=";
     };
     # On case-insensitive Darwin filesystems, the resolver chooses
     # extendedPagination.ts before ExtendedPagination.tsx. Give the component
@@ -30,7 +30,7 @@ callPackage ../epgstation-h/build.nix (
       substituteInPlace src/shared/AppPagination.tsx \
         --replace-fail "from './ExtendedPagination'" "from './ExtendedPaginationComponent'"
     '';
-    npmDepsHash = "sha256-lM96fjZTHe13/qhmxZSZyGfXwwrRIUz/7F1PwuUNaDY=";
-    clientNpmDepsHash = "sha256-NPVpmcunFihkDn7qP+wdvKJuGrF4c3C9ldsTprh32wM=";
+    npmDepsHash = "sha256-Gum0Nap5XvgvIMOMefLXvGfybYqnfqvomgk4zPffQxs=";
+    clientNpmDepsHash = "sha256-Mt+RNGdFVXHmFzza+g7rbCC0B59sv5kAebsEKddReIo=";
   }
 )

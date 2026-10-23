@@ -13,14 +13,14 @@
   fromSource ? false,
 }:
 let
-  version = "9.38";
+  version = "9.39";
   sourceBuild = callPackage ./source.nix {
     inherit version ffmpeg;
     src = fetchFromGitHub {
       owner = "rigaya";
       repo = "NVEnc";
       rev = version;
-      hash = "sha256-+ElEK+G5ccNWUhXj+NtHY9vm6gvQqGUSdSVyNGxKHcE=";
+      hash = "sha256-/ToIic0xitDwRPbz88r3c/L+5YMLr3YcL39kGBRxLX0=";
       fetchSubmodules = true;
     };
   };
@@ -34,7 +34,7 @@ else
 
     src = fetchurl {
       url = "https://github.com/rigaya/NVEnc/releases/download/${finalAttrs.version}/nvencc_${finalAttrs.version}_amd64.deb";
-      hash = "sha256-jA1UyXR62mkyB6LZ5nHvw2vv16ZgWFAvwqopnw6Zd6w=";
+      hash = "sha256-ex1xasaW1CCEamQiYTzKtRq4NvppXcamKsF4VBSfIDo=";
     };
 
     nativeBuildInputs = [
