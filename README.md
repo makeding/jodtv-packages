@@ -50,11 +50,18 @@ PT3、上流版 PX4、Siano、TBS6812、A865R のドライバーを含みます�
 `packages.x86_64-linux` はすべてのパッケージを公開します。`aarch64-linux` では
 ARM 向けのパッケージングを検証するまで、HonomiTV/KonomiTV と Intel 向け
 エンコード関連パッケージを除外しています。`aarch64-darwin` では Hiraku、libaribb61、libaribtlv、
-PSI/SI ツール、tsreadex、tsreplace、FFmpeg パッチセットを公開します。
+PSI/SI ツール、mmt2ts、tsreadex、tsreplace、FFmpeg パッチセットを公開します。
 ソースの取得を伴うパッケージが無関係なツールの評価まで要求しないよう、公開する一覧を
 明示しています。出力が存在することは、そのプラットフォームでビルド済みであることを
 意味しません。HonomiTV と FFmpeg パッチセットの評価にはソースが必要です。
 `--option allow-import-from-derivation false` を指定すると、その要求を確認できます。
+
+## MMT/TLV 変換ツール
+
+`nix build .#mmt2ts` で `mmt2ts`、`ts2mmt`、`mmtcut` をまとめてビルドできます。
+MMT/TLV と MPEG-2 TS の相互変換、解析・検証、時間範囲による切り出しに対応します。
+Linux と macOS 向けの独立パッケージです。利用例と検証範囲は
+[パッケージ仕様](pkgs/mmt2ts/README.md)を参照してください。
 
 ## バイナリキャッシュ
 

@@ -61,6 +61,7 @@
             "hiraku"
             "libaribb61"
             "libaribtlv"
+            "mmt2ts"
             "psisiarc"
             "psisimux"
             "tsreadex"

@@ -83,10 +83,15 @@ a different kernel.
 `packages.x86_64-linux` exposes the full package set. The aarch64-linux output
 omits EDCB-Wine, HonomiTV/KonomiTV and Intel encoding packages until their ARM packaging is
 validated. The aarch64-darwin output contains Hiraku, libaribb61, libaribtlv, PSI/SI tools,
-tsreadex, tsreplace and the FFmpeg patchset. Output lists are explicit to keep
+mmt2ts, tsreadex, tsreplace and the FFmpeg patchset. Output lists are explicit to keep
 source-dependent packages from forcing evaluation of unrelated tools.
 An output's presence is not a claim that it was built on that platform. HonomiTV and the FFmpeg patchset require source-dependent evaluation;
 `--option allow-import-from-derivation false` reports those requirements explicitly.
+
+`nix build .#mmt2ts` builds the standalone Linux/macOS package containing
+`mmt2ts`, `ts2mmt` and `mmtcut` for MMT/TLV and MPEG-2 TS conversion, inspection,
+verification and time-range extraction. See the
+[package contract](pkgs/mmt2ts/README.md) for usage and validation boundaries.
 
 ## Binary cache
 

@@ -10,6 +10,12 @@ spec.loader.exec_module(bump)
 
 
 class BumpTests(unittest.TestCase):
+    def test_mmt2ts_tracks_stable_releases_in_daily_updates(self):
+        self.assertIn("mmt2ts", bump.packages(upstream_only=True))
+        args = argparse.Namespace(version=None, system="aarch64-darwin", build=False)
+        command = next(bump.commands(["mmt2ts"], args))
+        self.assertEqual(command[command.index("--version") + 1], "stable")
+
     def test_all_excludes_manually_pinned_sources(self):
         available = bump.packages()
         self.assertTrue(available)
