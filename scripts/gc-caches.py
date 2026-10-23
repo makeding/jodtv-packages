@@ -61,14 +61,14 @@ def nix_json(*args):
 def current_paths(system):
     roots = nix_json(
         "eval", "--impure", "--json", f".#packages.{system}", "--apply",
-        "ps: builtins.mapAttrs (_: p: { inherit (p) drvPath outPath; }) ps",
+        "ps: builtins.mapAttrs (_: p: { drvPath = p.drvPath; outputPath = p.outPath; }) ps",
     )
     if not roots:
         raise ValueError("Refusing GC with an empty package set")
     document = nix_json("derivation", "show", "--recursive", *sorted({
         root["drvPath"] for root in roots.values()
     }))
-    paths = {root["outPath"] for root in roots.values()}
+    paths = {root["outputPath"] for root in roots.values()}
     for drv, data in document.get("derivations", document).items():
         paths.add(drv)
         for output in data["outputs"].values():
@@ -126,7 +126,7 @@ def cachix_plan(api, upstream, cache, roots, protected, github_entries, ref):
         return metadata[value]
 
     # Include every cached build input/output, not just package runtime roots.
-    starts = (protected & available) | {store_hash(root["outPath"]) for root in roots.values()}
+    starts = (protected & available) | {store_hash(root["outputPath"]) for root in roots.values()}
     closure, nars = cached_closure(starts, narinfo)
     protected = protected | closure
     # A protected store path can be served by cache.nixos.org while only its

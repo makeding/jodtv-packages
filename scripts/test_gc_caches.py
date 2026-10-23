@@ -23,7 +23,7 @@ def entry(number, key, ref=REF):
 
 class CacheRetentionTests(unittest.TestCase):
     def test_nix_formats_keep_build_outputs_sources_and_derivations(self):
-        root = {"pkg": {"drvPath": f"/nix/store/{A}-pkg.drv", "outPath": f"/nix/store/{B}-pkg"}}
+        root = {"pkg": {"drvPath": f"/nix/store/{A}-pkg.drv", "outputPath": f"/nix/store/{B}-pkg"}}
         for document in [
             {f"/nix/store/{A}-pkg.drv": {"outputs": {"out": {"path": f"/nix/store/{B}-pkg"}},
                                         "inputSrcs": [f"/nix/store/{C}-source"]}},
@@ -35,11 +35,20 @@ class CacheRetentionTests(unittest.TestCase):
                 self.assertEqual(roots, root)
                 self.assertEqual(protected, {A, B, C})
 
+    def test_root_projection_avoids_derivation_json_coercion(self):
+        root = {"pkg": {"drvPath": f"{A}-pkg.drv", "outputPath": f"{B}-pkg"}}
+        document = {f"{A}-pkg.drv": {"outputs": {"out": {"path": f"{B}-pkg"}}, "inputSrcs": []}}
+        with patch.object(gc, "nix_json", side_effect=[root, document]) as nix_json:
+            gc.current_paths("x86_64-linux")
+        projection = nix_json.call_args_list[0].args[-1]
+        self.assertIn("outputPath = p.outPath", projection)
+        self.assertNotIn("inherit (p) drvPath outPath", projection)
+
     def test_empty_package_inventory_and_unknown_output_abort(self):
         with patch.object(gc, "nix_json", return_value={}):
             with self.assertRaisesRegex(ValueError, "empty"):
                 gc.current_paths("x86_64-linux")
-        root = {"pkg": {"drvPath": f"{A}-pkg.drv", "outPath": f"{B}-pkg"}}
+        root = {"pkg": {"drvPath": f"{A}-pkg.drv", "outputPath": f"{B}-pkg"}}
         with patch.object(gc, "nix_json", side_effect=[root, {f"{A}-pkg.drv": {"outputs": {"out": {}}}}]):
             with self.assertRaisesRegex(ValueError, "output path"):
                 gc.current_paths("x86_64-linux")
@@ -71,7 +80,7 @@ class CacheRetentionTests(unittest.TestCase):
             f"/api/v1/cache/jodtv/{C}.narinfo": info(NAR_C),
         }[path]
         obsolete, protected, nars = gc.cachix_plan(
-            api, upstream, "jodtv", {"pkg": {"outPath": f"/nix/store/{A}-pkg"}}, {A, B}, [], REF,
+            api, upstream, "jodtv", {"pkg": {"outputPath": f"/nix/store/{A}-pkg"}}, {A, B}, [], REF,
         )
         self.assertEqual(obsolete, {D})
         self.assertEqual(protected, {A, B, C})
@@ -83,7 +92,7 @@ class CacheRetentionTests(unittest.TestCase):
         api.request.side_effect = [[D], []]
         upstream.request.return_value = f"NarHash: sha256:{NAR_A}\nReferences: \n"
         obsolete, protected, _ = gc.cachix_plan(
-            api, upstream, "jodtv", {"pkg": {"outPath": f"{A}-pkg"}}, {A}, [], REF,
+            api, upstream, "jodtv", {"pkg": {"outputPath": f"{A}-pkg"}}, {A}, [], REF,
         )
         self.assertEqual(obsolete, {D})
         self.assertIn(A, protected)
@@ -112,7 +121,7 @@ class CacheRetentionTests(unittest.TestCase):
         upstream.request.return_value = None
         with self.assertRaisesRegex(ValueError, "missing from both caches"):
             gc.cachix_plan(
-                api, upstream, "jodtv", {"pkg": {"outPath": f"{B}-pkg"}}, {B}, [], REF
+                api, upstream, "jodtv", {"pkg": {"outputPath": f"{B}-pkg"}}, {B}, [], REF
             )
         self.assertEqual(api.request.call_count, 1)
         upstream.request.assert_called_once_with(f"/{B}.narinfo", missing_ok=True, text=True)
@@ -128,7 +137,7 @@ class CacheRetentionTests(unittest.TestCase):
             api,
             upstream,
             "jodtv",
-            {"pkg": {"outPath": f"{C}-pkg"}},
+            {"pkg": {"outputPath": f"{C}-pkg"}},
             {C},
             [
                 entry(1, C + ".narinfo-aB12"),
@@ -169,7 +178,7 @@ class CacheRetentionTests(unittest.TestCase):
             api,
             upstream,
             "jodtv",
-            {"pkg": {"outPath": f"{A}-pkg"}},
+            {"pkg": {"outputPath": f"{A}-pkg"}},
             {A},
             [entry(1, B + ".narinfo-aB12", "refs/heads/feature")],
             REF,
@@ -202,7 +211,7 @@ class CacheRetentionTests(unittest.TestCase):
         if plan is None:
             plan = ({B}, {A}, {NAR_A})
         with patch.object(gc, "at_revision", side_effect=revisions), \
-             patch.object(gc, "current_paths", return_value=({"pkg": {"outPath": f"{A}-pkg"}}, {A})), \
+             patch.object(gc, "current_paths", return_value=({"pkg": {"outputPath": f"{A}-pkg"}}, {A})), \
              patch.object(gc, "cachix_plan", return_value=plan), \
              patch.object(gc, "github_caches", return_value=[entry(1, B + ".narinfo-aB12")]), \
              patch("builtins.print"):

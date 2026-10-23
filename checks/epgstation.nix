@@ -5,21 +5,23 @@
 }:
 let
   lib = nixpkgs.lib;
-  configOf = module: (lib.nixosSystem {
-    system = "x86_64-linux";
-    modules = [
-      self.nixosModules.packages
-      self.nixosModules.dtv
-      {
-        system.stateVersion = "26.05";
-        boot.isContainer = true;
-        dtv.mirakurun.enable = true;
-        # Execute the generated credential script on the check host.
-        nixpkgs.overlays = [ (_final: _prev: { inherit (pkgs) openssl; }) ];
-      }
-      module
-    ];
-  }).config;
+  configOf =
+    module:
+    (lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        self.nixosModules.packages
+        self.nixosModules.dtv
+        {
+          system.stateVersion = "26.05";
+          boot.isContainer = true;
+          dtv.mirakurun.enable = true;
+          # Execute the generated credential script on the check host.
+          nixpkgs.overlays = [ (_final: _prev: { inherit (pkgs) openssl; }) ];
+        }
+        module
+      ];
+    }).config;
   disabled = configOf { };
   enabled = configOf { dtv.epgstation.enable = true; };
   existing = configOf {
@@ -30,10 +32,9 @@ let
     };
     services.mysql.settings.mysqld.bind-address = "192.0.2.10";
   };
-  initialize = lib.replaceStrings
-    [ enabled.services.epgstation.database.passwordFile ]
-    [ "\"$PWD/password\"" ]
-    enabled.system.activationScripts.epgstationDatabasePassword.text;
+  initialize =
+    lib.replaceStrings [ enabled.services.epgstation.database.passwordFile ] [ "\"$PWD/password\"" ]
+      enabled.system.activationScripts.epgstationDatabasePassword.text;
 in
 {
   epgstation-bootstrap =
