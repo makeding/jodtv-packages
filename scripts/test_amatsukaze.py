@@ -10,9 +10,10 @@ import unittest
 
 PROJECT = Path(__file__).resolve().parents[1]
 RUNNER = PROJECT / "pkgs/amatsukaze/run.py"
+DOTNET_HOST = PROJECT / "pkgs/amatsukaze/dotnet-host.sh"
 ROOT = Path("/private/tmp/jodtv-amatsukaze-tests")
-if __name__ == "__main__" and len(sys.argv) == 3:
-    RUNNER, ROOT = map(Path, sys.argv[1:])
+if __name__ == "__main__" and len(sys.argv) == 4:
+    RUNNER, ROOT, DOTNET_HOST = map(Path, sys.argv[1:])
     sys.argv[1:] = []
 
 
@@ -90,6 +91,26 @@ sys.exit(int(os.environ.get("MOCK_EXIT", 0)))
         self.assertEqual(self.run_cli().returncode, 0)
         self.assertFalse((self.state / "exe_files/obsolete").exists())
         self.assertEqual((self.state / "exe_files/custom-tool").read_text(), "user-tool")
+
+    def test_dotnet_host_uses_copied_state_directory(self):
+        executable = self.bundle / "exe_files/AmatsukazeServerCLI"
+        executable.rename(executable.with_name(".AmatsukazeServerCLI-unwrapped"))
+        loader = ROOT / "loader"
+        loader.write_text(f"#!{sys.executable}\n" + '''import os, sys
+from pathlib import Path
+assert sys.argv[1] == "--library-path"
+assert sys.argv[2].endswith(str(Path(sys.argv[3]).parent / "lib"))
+os.execv(sys.argv[3], sys.argv[3:])
+''')
+        loader.chmod(0o755)
+        executable.write_text(DOTNET_HOST.read_text().replace("@shell@", shutil.which("sh"))
+                              .replace("@loader@", str(loader)).replace("@glibc@", "/fixture"))
+        executable.chmod(0o755)
+        result = self.run_cli("server", "-p", "32770")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls()[-1]["name"], ".AmatsukazeServerCLI-unwrapped")
+        self.assertEqual(self.calls()[-1]["cwd"], str(self.state))
+        self.assertEqual(self.calls()[-1]["args"], ["-p", "32770"])
 
     def test_running_server_allows_tasks_and_fences_upgrades(self):
         process = subprocess.Popen(self.base, env=self.env | {"MOCK_HOLD": "1"}, cwd=ROOT,

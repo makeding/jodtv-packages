@@ -53,6 +53,23 @@ PSI/SI ツール、tsreadex、tsreplace、FFmpeg パッチセットを公開し�
 意味しません。HonomiTV と FFmpeg パッチセットの評価にはソースが必要です。
 `--option allow-import-from-derivation false` を指定すると、その要求を確認できます。
 
+## バイナリキャッシュ
+
+[jodtv.cachix.org](https://jodtv.cachix.org) のビルド済みパッケージを利用するには、
+NixOS の設定に追加してください。
+
+```nix
+nix.settings = {
+  extra-substituters = [ "https://jodtv.cachix.org" ];
+  extra-trusted-public-keys = [
+    "jodtv.cachix.org-1:aYGvlIzrrtKlHUyKX+FP/hsgELT8SeaPnMeAn2tQDG4="
+  ];
+};
+```
+
+既存のキャッシュ設定は維持されます。同じ derivation がキャッシュにある場合に
+利用され、利用側の nixpkgs や override が異なる場合はローカルビルドになることがあります。
+
 ## 利用側で依存パッケージを差し替える
 
 録画ツールは通常の `libaribb25` をパッケージ引数として受け取ります。
@@ -277,6 +294,55 @@ Linux/macOS 向けの独立した MMT/TLV ACAS デスクランブルライブラ
 
 TBS6812 の各物理チューナーは GR と BS/CS/BS4K を排他的に設定します。
 GR と衛星モードの混在は評価時に拒否します。2 つのチューナーは個別に選択できます。
+
+## BS4K のメディア処理
+
+`dtv.bs4k` は `dtv.tuners` と同じ階層です。有効なチューナーの `mode` に
+`"BS4K"` があれば自動で有効になります。リモート配信や録画ファイルだけを扱う場合:
+
+```nix
+dtv.bs4k = true;
+```
+
+FFmpeg/FFprobe、QSVEncC、NVEncC、tsreplace、HonomiTV/KonomiTV（PyAV を含む）、
+両 EPGStation と Amatsukaze のメディア処理部を `ffmpeg-libaribtlv` に統一します。
+NVEncC と Amatsukaze の対象ツールはソースから再ビルドします。バイナリ内蔵の
+FFmpeg は PATH の変更だけでは置き換わりません。BS4K がなければ通常のパッケージを
+使用し、有効な BS4K チューナーがある状態で明示的に false にすると評価エラーになります。
+
+パッケージの選択にはホスト側の `pkgs` を使ってください。
+例: `services.honomitv.package = pkgs.konomitv`。
+別の flake 評価や `nix run .#...` には NixOS の設定は引き継がれません。
+ソースビルドには Linux builder、NVEncC には CUDA 再配布ライブラリも必要です。
+
+## Amatsukaze と NVEncC
+
+x86_64 Linux で `amatsukaze` と `nvencc` の unfree パッケージを許可して実行します。
+
+```sh
+nix run .#amatsukaze
+nix run .#amatsukaze -- add-task -f /recordings/input.ts
+nix run .#amatsukaze -- cli --help
+nix run .#nvencc -- --help
+```
+
+WebUI は既定で `http://localhost:32769/`、状態は
+`${XDG_DATA_HOME:-$HOME/.local/share}/amatsukaze` に保存します。
+`--state-dir` または `AMATSUKAZE_STATE_DIR` で変更できます。
+更新時も設定、プロファイル、キュー、履歴を保持します。AviSynth、フィルターと
+ソフトウェアエンコーダーを同梱しています。NVEncC は独立したパッケージで、
+Linux の KonomiTV/HonomiTV にも組み込みます。ソフトウェア処理だけの Amatsukaze
+には不要です。NVIDIA エンコードにはホスト側の動作する NVIDIA ドライバーが必要です。
+
+default モジュールに含まれる任意のサービス:
+
+```nix
+services.amatsukaze = {
+  enable = true;
+  mediaDirectories = [ "/srv/recordings" "/srv/encoded" ];
+  # openFirewall = true; # サーバー 32768、WebUI 32769
+};
+```
 
 ## EDCB on Wine
 

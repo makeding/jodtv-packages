@@ -43,7 +43,7 @@ in
     assert !(self.packages.aarch64-darwin ? nvencc);
     pkgs.runCommand "amatsukaze-module" { } "touch $out";
   amatsukaze-launcher = pkgs.runCommand "amatsukaze-launcher" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-    python ${../scripts/test_amatsukaze.py} ${../pkgs/amatsukaze/run.py} "$TMPDIR/amatsukaze-tests"
+    python ${../scripts/test_amatsukaze.py} ${../pkgs/amatsukaze/run.py} "$TMPDIR/amatsukaze-tests" ${../pkgs/amatsukaze/dotnet-host.sh}
     touch "$out"
   '';
 }

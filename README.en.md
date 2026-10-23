@@ -85,6 +85,74 @@ source-dependent packages from forcing evaluation of unrelated tools.
 An output's presence is not a claim that it was built on that platform. HonomiTV and the FFmpeg patchset require source-dependent evaluation;
 `--option allow-import-from-derivation false` reports those requirements explicitly.
 
+## Binary cache
+
+To use prebuilt packages from [jodtv.cachix.org](https://jodtv.cachix.org),
+add this to your NixOS configuration:
+
+```nix
+nix.settings = {
+  extra-substituters = [ "https://jodtv.cachix.org" ];
+  extra-trusted-public-keys = [
+    "jodtv.cachix.org-1:aYGvlIzrrtKlHUyKX+FP/hsgELT8SeaPnMeAn2tQDG4="
+  ];
+};
+```
+
+This preserves existing cache settings. Nix uses the cache when the same
+derivation is available; different nixpkgs revisions or overrides may require a local build.
+
+## BS4K media processing
+
+`dtv.bs4k` is a sibling of `dtv.tuners`. An enabled tuner with `"BS4K"` in
+its `mode` enables it automatically. For remote streams or recording-only hosts:
+
+```nix
+dtv.bs4k = true;
+```
+
+This selects `ffmpeg-libaribtlv` for FFmpeg/FFprobe, QSVEncC, NVEncC, tsreplace,
+both TV server variants (including PyAV), both EPGStation variants and
+Amatsukaze's native media components. NVEncC and the affected Amatsukaze tools
+are rebuilt from source; binary bundles cannot gain MMTS support through PATH.
+Without BS4K the normal packages remain selected. Explicitly disabling it while
+an enabled tuner requires BS4K is an evaluation error.
+
+Use the host's configured `pkgs` when selecting a package, for example
+`services.honomitv.package = pkgs.konomitv`. Packages from a separate flake
+evaluation, including plain `nix run .#...`, do not inherit NixOS options.
+Source builds need a Linux builder; NVEncC additionally uses CUDA redistributables.
+
+## Amatsukaze and NVEncC
+
+On x86_64 Linux, permit the `amatsukaze` and `nvencc` bundles in your Nixpkgs
+unfree policy, then run:
+
+```sh
+nix run .#amatsukaze
+nix run .#amatsukaze -- add-task -f /recordings/input.ts
+nix run .#amatsukaze -- cli --help
+nix run .#nvencc -- --help
+```
+
+Amatsukaze's WebUI defaults to `http://localhost:32769/`. State lives in
+`${XDG_DATA_HOME:-$HOME/.local/share}/amatsukaze`; `--state-dir` or
+`AMATSUKAZE_STATE_DIR` changes it. Nix upgrades preserve configuration, profiles,
+queue and history. The bundle includes AviSynth, filters and software encoders.
+NVEncC is available independently and is included in Linux KonomiTV/HonomiTV;
+software-only Amatsukaze does not require it. NVIDIA encoding requires the host's
+working NVIDIA driver.
+
+The default module includes the optional `services.amatsukaze` service:
+
+```nix
+services.amatsukaze = {
+  enable = true;
+  mediaDirectories = [ "/srv/recordings" "/srv/encoded" ];
+  # openFirewall = true; # server port 32768 and WebUI port 32769
+};
+```
+
 ## EDCB under Wine
 
 On an x86_64 Linux desktop, run EDCB directly with bundled Wine and Japanese fonts:

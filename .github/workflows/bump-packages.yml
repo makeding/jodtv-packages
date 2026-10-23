@@ -33,6 +33,13 @@ jobs:
             max-jobs = 1
             cores = 2
 
+      - name: Cache Nix builds between runs
+        uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+        with:
+          use-gha-cache: true
+          use-flakehub: false
+          diagnostic-endpoint: ''
+
       - name: Check updater
         run: python3 -B -m unittest discover -s scripts -p 'test_bump_deps.py'
 
