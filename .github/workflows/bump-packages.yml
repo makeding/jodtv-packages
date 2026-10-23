@@ -1,0 +1,77 @@
+name: Bump packages
+
+on:
+  schedule:
+    # 03:23 Asia/Tokyo (18:23 UTC on the previous day).
+    - cron: '23 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bump-packages
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      NIXPKGS_ALLOW_UNFREE: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: cachix/install-nix-action@d9186cbdca7adedf113a159fa91f725a27866771 # v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            max-jobs = 1
+            cores = 2
+
+      - name: Check updater
+        run: python3 -B -m unittest discover -s scripts -p 'test_bump_deps.py'
+
+      - name: Update package sources and dependency hashes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          nix shell --inputs-from . nixpkgs#nix-update nixpkgs#python3 \
+            --command python3 scripts/bump-deps.py --all --upstream-only --system x86_64-linux
+
+      - name: Validate updated packages
+        shell: bash
+        run: |
+          git diff --check
+          git diff --exit-code -- . ':!pkgs'
+          while IFS= read -r path; do
+            case "$path" in
+              pkgs/*/package.nix)
+                package="${path#pkgs/}"
+                package="${package%/package.nix}"
+                nix eval --impure --raw ".#legacyPackages.x86_64-linux.${package}.drvPath" > /dev/null
+                ;;
+            esac
+          done < <(git diff --name-only -- pkgs)
+
+      - name: Commit and push updates
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git add -- pkgs
+          if git diff --cached --quiet; then
+            echo 'All packages are up to date.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: bump packaged dependencies'
+          git push origin "HEAD:refs/heads/${DEFAULT_BRANCH}"
+
+      - name: Show partial edits on failure
+        if: failure()
+        run: git diff HEAD -- pkgs

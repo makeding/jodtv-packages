@@ -7,6 +7,10 @@ let
       system.stateVersion = "26.05";
       boot.isContainer = true;
       nixpkgs.config.allowUnfree = true;
+      # Source-only IFDs must use a native fetcher when evaluating Linux on macOS.
+      nixpkgs.overlays = [ (_: _: {
+        inherit (pkgs) fetchFromGitHub fetchurl;
+      }) ];
     } module ];
   };
   normal = systemOf { };
@@ -45,6 +49,8 @@ in
       && selected.${name}.nvenccForHost.drvPath == selected.nvencc.drvPath
       && hasReference selected.${name}.postPatch selected.qsvencc
       && hasReference selected.${name}.postPatch ffmpeg
+      && hasInput selected.${name}.pythonSet.av ffmpeg
+      && lib.hasSuffix ".tar.gz" selected.${name}.pythonSet.av.src.url
     ) [ "honomitv" "konomitv" ];
     assert builtins.all (name: hasReference selected.${name}.postInstall ffmpeg)
       [ "epgstation-h" "epgstation-upstream" ];

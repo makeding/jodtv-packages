@@ -9,6 +9,7 @@
   pyproject-build-systems,
   coreutils,
   ffmpeg-headless,
+  pkg-config,
   qsvencc ? null,
   nvencc,
   tsreadex,
@@ -44,6 +45,20 @@ let
   pyprojectOverlay = workspace.mkPyprojectOverlay {
     sourcePreference = "wheel";
     pythonVersion = python.pythonVersion;
+  };
+  # PyAV wheels bundle their own libav libraries. BS4K must also rebuild this
+  # in-process reader; changing the external FFmpeg executable cannot affect it.
+  bs4k = ffmpeg-headless.libaribtlvSupport or false;
+  mediaOverrides = final: prev: lib.optionalAttrs bs4k {
+    av = ((workspace.mkPyprojectOverlay {
+      sourcePreference = "sdist";
+      pythonVersion = python.pythonVersion;
+    }) final prev).av.overrideAttrs (old: {
+      nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkg-config ]
+        ++ final.resolveBuildSystem { setuptools = [ ]; cython = [ ]; };
+      buildInputs = (old.buildInputs or [ ]) ++ [ ffmpeg-headless ];
+      passthru = (old.passthru or { }) // { ffmpeg = ffmpeg-headless; };
+    });
   };
   setuptoolsBuildSystemPackages = [
     "elevate"
@@ -84,6 +99,7 @@ let
           pyproject-build-systems.overlays.wheel
           pyprojectOverlay
           buildSystemOverrides
+          mediaOverrides
         ]
       );
   pythonEnv = pythonSet.mkVirtualEnv "${pname}-env" workspace.deps.default;

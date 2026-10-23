@@ -10,9 +10,36 @@ spec.loader.exec_module(bump)
 
 
 class BumpTests(unittest.TestCase):
+    def test_all_excludes_manually_pinned_sources(self):
+        available = bump.packages()
+        self.assertTrue(available)
+        self.assertTrue({"a865r-firmware", "edcb-wine", "ffmpeg-libaribtlv"}.isdisjoint(available))
+        with patch.object(bump.subprocess, "run") as run, patch("builtins.print") as output:
+            self.assertEqual(bump.main(["--all", "--dry-run"]), 0)
+            run.assert_not_called()
+            commands = [call.args[0] for call in output.call_args_list
+                        if call.args[0].startswith("+ nix-update ")]
+            self.assertEqual(len(commands), len(available))
+
     def test_native_apple_silicon_system(self):
         with patch.object(bump.platform, "machine", return_value="arm64"), patch.object(bump.platform, "system", return_value="Darwin"):
             self.assertEqual(bump.native_system(), "aarch64-darwin")
+
+    def test_daily_updates_skip_maintained_software(self):
+        maintained = {"epgstation-h", "hiraku", "honomitv", "libaribb61", "libaribtlv",
+                      "librw5100", "mirakurun", "pcsc-rw5100", "recdvb", "recisdb", "tsreplace"}
+        upstream = set(bump.packages(upstream_only=True))
+        self.assertTrue(maintained.isdisjoint(upstream))
+        self.assertTrue(maintained.issubset(bump.packages()))
+        self.assertTrue({"konomitv", "epgstation-upstream", "amatsukaze", "nvencc"}.issubset(upstream))
+        with patch.object(bump.subprocess, "run") as run, patch("builtins.print") as output:
+            self.assertEqual(bump.main(["--all", "--upstream-only", "--dry-run"]), 0)
+            run.assert_not_called()
+            commands = [call.args[0] for call in output.call_args_list
+                        if call.args[0].startswith("+ nix-update ")]
+            self.assertEqual(len(commands), len(upstream))
+            for name in maintained:
+                self.assertFalse(any(f".{name} " in cmd for cmd in commands))
 
     def test_branch_version_uses_exact_commit_manifest_not_old_fork_tag(self):
         revision = "b" * 40

@@ -15,7 +15,7 @@ in
       assertion = !hasTuner || config.dtv.bs4k;
       message = "An enabled BS4K tuner requires dtv.bs4k; remove the explicit false value.";
     }];
-    nixpkgs.overlays = lib.mkIf config.dtv.bs4k [
+    nixpkgs.overlays = lib.mkIf config.dtv.bs4k (lib.mkAfter [
       (final: prev:
         let
           ffmpeg = final.ffmpeg-libaribtlv;
@@ -33,6 +33,6 @@ in
           epgstation-upstream = prev.epgstation-upstream.override { ffmpeg-headless = ffmpeg; };
           epgstation = final.epgstation-h;
         })
-    ];
+    ]);
   };
 }
