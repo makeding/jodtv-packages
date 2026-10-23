@@ -84,9 +84,9 @@ in
         ""
         "${lib.getExe enabled.services.pcscd.package} -f -c /etc/reader.conf --debug"
       ];
-    assert lib.hasInfix (builtins.unsafeDiscardStringContext (lib.getExe polkit.services.pcscd.package)) (
-      builtins.elemAt polkit.systemd.services.pcscd.serviceConfig.ExecStart 1
-    );
+    assert lib.hasInfix (builtins.unsafeDiscardStringContext (
+      lib.getExe polkit.services.pcscd.package
+    )) (builtins.elemAt polkit.systemd.services.pcscd.serviceConfig.ExecStart 1);
     assert lib.hasInfix " -x " (
       builtins.elemAt overridden.systemd.services.pcscd.serviceConfig.ExecStart 1
     );

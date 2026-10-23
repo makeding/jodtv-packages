@@ -1,5 +1,6 @@
 {
   lib,
+  stdenv,
   stdenvNoCC,
   fetchurl,
   dpkg,
@@ -17,10 +18,11 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     hash = "sha256-jA1UyXR62mkyB6LZ5nHvw2vv16ZgWFAvwqopnw6Zd6w=";
   };
 
-  nativeBuildInputs = [ dpkg autoPatchelfHook addDriverRunpath makeWrapper ];
-  buildInputs = [ stdenvNoCC.cc.cc.lib ];
+  nativeBuildInputs = [ dpkg autoPatchelfHook makeWrapper ];
+  buildInputs = [ stdenv.cc.cc.lib ];
   # Supplied by the consuming host's NVIDIA driver, never a build-time stub.
   autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
+  appendRunpaths = [ "${addDriverRunpath.driverLink}/lib" ];
   dontConfigure = true;
   dontBuild = true;
   dontStrip = true;
@@ -34,7 +36,6 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   '';
 
   postFixup = ''
-    addDriverRunpath "$out/bin/nvencc"
     wrapProgram "$out/bin/nvencc" \
       --prefix LD_LIBRARY_PATH : ${addDriverRunpath.driverLink}/lib
   '';

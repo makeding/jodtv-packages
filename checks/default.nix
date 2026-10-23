@@ -152,3 +152,5 @@ in
 // import ./upstream.nix { inherit self nixpkgs pkgs; }
 // import ./edcb-wine.nix { inherit self nixpkgs pkgs; }
 // import ./casproxyserver.nix { inherit self nixpkgs pkgs; }
+// import ./amatsukaze.nix { inherit self nixpkgs pkgs; }
+// import ./transcoder-bundles.nix { inherit self nixpkgs pkgs; }

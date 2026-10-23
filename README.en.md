@@ -2,8 +2,21 @@
 
 ## Shared CAS proxy and database management
 
-Enable `services.casproxyserver` on A and configure `settings.listenIp`,
-`settings.port`, and `settings.allowedIps`. On B (Colmena):
+Configure A once (the example network must be replaced with your own):
+
+```nix
+services.casproxyserver = {
+  enable = true;
+  openFirewall = true;
+  settings = {
+    listenIp = "192.0.2.10";
+    port = 24000;
+    allowedIps = [ "192.0.2.0/24" ];
+  };
+};
+```
+
+On B (Colmena), reference A directly:
 
 ```nix
 { nodes, ... }: {

@@ -9,6 +9,8 @@
   noto-fonts-cjk-sans,
   writeText,
   addDriverRunpath,
+  zlib,
+  krb5,
 }:
 let
   fonts = writeText "amatsukaze-fonts.conf" ''
@@ -51,7 +53,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
       --set FONTCONFIG_FILE ${fonts} \
       --set AMT_ENABLE_SELF_UPDATE 0 \
       --set DOTNET_SYSTEM_GLOBALIZATION_APPLOCALICU 76.1 \
-      --prefix LD_LIBRARY_PATH : "$out/share/amatsukaze/exe_files/lib:${addDriverRunpath.driverLink}/lib" \
+      --prefix LD_LIBRARY_PATH : "$out/share/amatsukaze/exe_files/lib:${lib.makeLibraryPath [ zlib krb5 ]}:${addDriverRunpath.driverLink}/lib" \
       --set OPENSSL_MODULES "$out/share/amatsukaze/exe_files/lib/ossl-modules"
     makeWrapper "$out/bin/amatsukaze" "$out/bin/amatsukaze-cli" --add-flags cli
     makeWrapper "$out/bin/amatsukaze" "$out/bin/amatsukaze-add-task" --add-flags add-task

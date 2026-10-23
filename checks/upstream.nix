@@ -54,6 +54,10 @@ in
     assert linuxPkgs.epgstation-upstream.src.rev != linuxPkgs.epgstation-h.src.rev;
     assert linuxPkgs.konomitv.pythonVersion == "3.13";
     assert linuxPkgs.honomitv.pythonVersion == "3.14";
+    assert linuxPkgs.honomitv.nvenccForHost.outPath == linuxPkgs.nvencc.outPath;
+    assert linuxPkgs.konomitv.nvenccForHost.outPath == linuxPkgs.nvencc.outPath;
+    assert !(builtins.elem "NVEncC" linuxPkgs.honomitv.uncheckedTools);
+    assert !(builtins.elem "NVEncC" linuxPkgs.konomitv.uncheckedTools);
     assert
       (linuxPkgs.honomitv.override { pythonInterpreter = linuxPkgs.python313; }).pythonVersion == "3.13";
     assert

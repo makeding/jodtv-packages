@@ -10,6 +10,7 @@
   coreutils,
   ffmpeg-headless,
   qsvencc ? null,
+  nvencc,
   tsreadex,
   psisiarc,
   psisimux,
@@ -32,6 +33,8 @@ let
   python = pythonInterpreter;
 
   qsvenccForHost = if stdenv.hostPlatform.isLinux then qsvencc else null;
+  nvenccForHost = if stdenv.hostPlatform.isLinux then nvencc else null;
+  uncheckedTools = [ "Akebi" "VCEEncC" "rkmppenc" ] ++ lib.optional (nvenccForHost == null) "NVEncC";
 
   pythonManifest = src + "/server/pyproject.toml";
   pythonLock = src + "/server/uv.lock";
@@ -185,7 +188,7 @@ stdenv.mkDerivation {
     # Skip the third-party encoders that this package does not provide.
     substituteInPlace KonomiTV.py \
       --replace-fail "    for library_name, library_path in LIBRARY_PATH.items():" \
-                     "    for library_name, library_path in LIBRARY_PATH.items():"$'\n'"        # Skip checks for encoders not provided by Nix build"$'\n'"        if library_name in ['Akebi', 'NVEncC', 'VCEEncC', 'rkmppenc']:"$'\n'"            continue"
+                     "    for library_name, library_path in LIBRARY_PATH.items():"$'\n'"        # Skip checks for tools not provided by this platform"$'\n'"        if library_name in ${lib.replaceStrings [ "\"" ] [ "'" ] (builtins.toJSON uncheckedTools)}:"$'\n'"            continue"
 
     # Change uvicorn to listen on configurable host and use configured port directly
     substituteInPlace KonomiTV.py \
@@ -199,7 +202,7 @@ stdenv.mkDerivation {
                      "__model_list = [name for _, name, _ in pkgutil.iter_modules(path=[str(BASE_DIR / 'app/models')])]"
 
     # Patch constants.py to use Nix-provided tools instead of thirdparty versions
-    # Other tools (NVEncC, VCEEncC, rkmppenc) will still use thirdparty directory
+    # Unsupported tools (VCEEncC, rkmppenc) retain their thirdparty paths.
     substituteInPlace app/constants.py \
       --replace-fail "'FFmpeg': str(LIBRARY_DIR / 'FFmpeg/ffmpeg') + LIBRARY_EXTENSION," \
                      "'FFmpeg': '${ffmpeg-headless}/bin/ffmpeg'," \
@@ -217,6 +220,12 @@ stdenv.mkDerivation {
       substituteInPlace app/constants.py \
         --replace-fail "'QSVEncC': str(LIBRARY_DIR / 'QSVEncC/QSVEncC') + LIBRARY_EXTENSION," \
                        "'QSVEncC': '${qsvenccForHost}/bin/qsvencc',"
+    ''}
+
+    ${lib.optionalString (nvenccForHost != null) ''
+      substituteInPlace app/constants.py \
+        --replace-fail "'NVEncC': str(LIBRARY_DIR / 'NVEncC/NVEncC') + LIBRARY_EXTENSION," \
+                       "'NVEncC': '${nvenccForHost}/bin/nvencc',"
     ''}
 
     cd ..
@@ -271,6 +280,7 @@ stdenv.mkDerivation {
   };
   passthru = {
     inherit pythonSet pythonEnv frontend;
+    inherit nvenccForHost uncheckedTools;
     pythonVersion = python.pythonVersion;
   };
 }

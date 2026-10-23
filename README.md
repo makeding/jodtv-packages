@@ -158,6 +158,7 @@ dtv.tuners = [{
 
 CAS プロキシは `services.casproxyserver.enable = true` で有効にできます。
 A の `settings.listenIp`、`settings.port`、`settings.allowedIps` を設定し、
+必要に応じて `openFirewall = true` でポートを開放します。
 B は次の参照だけでローカル BS4K/B61 録画に利用できます。
 
 ```nix
