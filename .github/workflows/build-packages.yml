@@ -67,7 +67,7 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
           extra_nix_config: |
-            max-jobs = 1
+            max-jobs = 2
             cores = 2
 
       - name: Read and populate the jodtv binary cache

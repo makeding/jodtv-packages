@@ -32,13 +32,15 @@ stdenv.mkDerivation rec {
     pkg-config
     dos2unix
   ];
-  # Upstream vendor builds otherwise bypass Nix's requested worker count.
+  # Select the upstream CI branch, patched below to honor Nix's worker count.
   MIRAKC_ARIB_CI = "1";
   cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
 
   postPatch = ''
     # The fetched tree has no .git directories; its vendored sources are pristine.
     substituteInPlace CMakeLists.txt --replace-fail 'git checkout -f && ' ""
+    substituteInPlace CMakeLists.txt \
+      --replace-fail 'set(NPROC 1)' 'set(NPROC "$ENV{NIX_BUILD_CORES}")'
     printf '#!/bin/sh\nprintf "source-archive\\n"\n' > scripts/tag-or-hash
     # TSDuck's recursive make uses this shell for recipes and $(shell ...).
     substituteInPlace vendor/tsduck-arib/Makefile.common \
@@ -48,8 +50,9 @@ stdenv.mkDerivation rec {
 
   buildPhase = ''
     runHook preBuild
+    # Each vendor project has its own worker pool; do not multiply those pools.
     cmake --build . --target vendor --parallel 1
-    cmake --build . --parallel 1
+    cmake --build . --parallel "$NIX_BUILD_CORES"
     runHook postBuild
   '';
   installPhase = ''
