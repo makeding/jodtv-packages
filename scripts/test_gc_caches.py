@@ -22,6 +22,28 @@ def entry(number, key, ref=REF):
 
 
 class CacheRetentionTests(unittest.TestCase):
+    def test_cachix_auth_error_names_secret_without_exposing_token(self):
+        for status in (401, 403):
+            with self.subTest(status=status), patch.object(
+                gc.urllib.request, "urlopen", side_effect=gc.urllib.error.HTTPError(
+                    "https://app.cachix.org", status, "denied", {}, None,
+                ),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "CACHIX_GC_AUTH_TOKEN") as error:
+                    gc.API("https://app.cachix.org", "secret-value").request("/api/v1/cache/jodtv/contents")
+                self.assertNotIn("secret-value", str(error.exception))
+
+    def test_failed_auth_precedes_nix_and_leaves_both_caches_untouched(self):
+        github, cachix = Mock(), Mock()
+        cachix.request.side_effect = RuntimeError("HTTP 401")
+        with patch.object(gc, "at_revision", return_value=True), \
+             patch.object(gc, "current_paths") as paths:
+            with self.assertRaisesRegex(RuntimeError, "HTTP 401"):
+                gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "revision", "jodtv", "x86_64-linux", True)
+        paths.assert_not_called()
+        github.request.assert_not_called()
+        cachix.request.assert_called_once_with("/api/v1/cache/jodtv/contents")
+
     def test_nix_formats_keep_build_outputs_sources_and_derivations(self):
         root = {"pkg": {"drvPath": f"/nix/store/{A}-pkg.drv", "outputPath": f"/nix/store/{B}-pkg"}}
         for document in [
@@ -233,6 +255,7 @@ class CacheRetentionTests(unittest.TestCase):
         if plan is None:
             plan = ({B}, {A}, {NAR_A})
         with patch.object(gc, "at_revision", side_effect=revisions), \
+             patch.object(gc, "cachix_contents", return_value={A, B}), \
              patch.object(gc, "current_paths", return_value=({"pkg": {"outputPath": f"{A}-pkg"}}, {A})), \
              patch.object(gc, "cachix_plan", return_value=plan), \
              patch.object(gc, "github_caches", return_value=[entry(1, B + ".narinfo-aB12")]), \
@@ -260,6 +283,7 @@ class CacheRetentionTests(unittest.TestCase):
     def test_failed_preflight_leaves_both_caches_untouched(self):
         github, cachix = Mock(), Mock()
         with patch.object(gc, "at_revision", return_value=True), \
+             patch.object(gc, "cachix_contents", return_value=set()), \
              patch.object(gc, "current_paths", return_value=({}, set())), \
              patch.object(gc, "github_caches", return_value=[]), \
              patch.object(gc, "cachix_plan", side_effect=ValueError("missing required output")):

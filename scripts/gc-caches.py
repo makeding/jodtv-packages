@@ -46,8 +46,18 @@ class API:
             with urllib.request.urlopen(request, timeout=60) as response:
                 body = response.read().decode()
         except urllib.error.HTTPError as error:
+            error.close()
             if missing_ok and error.code == 404:
                 return None
+            if error.code in (401, 403) and self.base == "https://app.cachix.org":
+                raise RuntimeError(
+                    f"{method} {self.base}{path}: HTTP {error.code}. "
+                    "Cachix rejected GC authentication/authorization. Set the repository "
+                    "Actions secret CACHIX_GC_AUTH_TOKEN to a valid personal API token "
+                    "with access to this cache's listing and deletion operations. "
+                    "A working upload token does not prove management API access. "
+                    "Check token validity and the account's cache permissions."
+                ) from None
             raise RuntimeError(f"{method} {self.base}{path}: HTTP {error.code}") from None
         if text:
             return body
@@ -123,8 +133,9 @@ def cached_closure(roots, narinfo):
     return seen, nars
 
 
-def cachix_plan(api, upstream, cache, roots, protected, github_entries, ref):
-    available = cachix_contents(api, cache)
+def cachix_plan(api, upstream, cache, roots, protected, github_entries, ref, available=None):
+    if available is None:
+        available = cachix_contents(api, cache)
     metadata = {}
 
     def narinfo(value):
@@ -212,10 +223,12 @@ def run_gc(github, cachix, upstream, repository, branch, revision, cache, system
     if not at_revision(github, repository, branch, revision):
         print("GC skipped: a newer default-branch revision has not passed this build.", flush=True)
         return
+    # Fail at the actual management API before expensive Nix evaluation.
+    available = cachix_contents(cachix, cache)
     roots, protected = current_paths(system)
     github_entries = github_caches(github, repository)
     obsolete, protected, nars = cachix_plan(
-        cachix, upstream, cache, roots, protected, github_entries, f"refs/heads/{branch}"
+        cachix, upstream, cache, roots, protected, github_entries, f"refs/heads/{branch}", available
     )
     entries = github_plan(github_entries, protected, nars, f"refs/heads/{branch}")
     # Finish all reads and validate the complete plan before either deletion API.
