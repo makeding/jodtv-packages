@@ -449,6 +449,100 @@ let
     && map (t: t.name) packageReplacement.services.mirakurun.tunerSettings == [ "override" ]
     && map (t: t.types) packageReplacement.services.mirakurun.tunerSettings == [ [ "GR" ] ];
 
+  mmtsConfig =
+    selection: extra:
+    configOf {
+      dtv = {
+        mirakurun.enable = true;
+        tuners = [
+          {
+            name = "convert";
+            driver = "command";
+            mode = [ "BS4K" ];
+            command = [ "/bin/true" ];
+          }
+          {
+            name = "raw";
+            driver = "command";
+            mode = [ "BS4K" ];
+            command = [ "/bin/true" ];
+            mmtsDecoder = false;
+          }
+          {
+            name = "terrestrial";
+            driver = "command";
+            mode = [ "GR" ];
+            command = [ "/bin/true" ];
+          }
+          {
+            name = "remote";
+            driver = "remote";
+            mode = [ "BS4K" ];
+            remote.host = "upstream.example";
+          }
+          {
+            name = "disabled";
+            enable = false;
+            driver = "command";
+            mode = [ "BS4K" ];
+            command = [ "/bin/true" ];
+          }
+        ];
+      }
+      // lib.optionalAttrs (selection != null) { mmtsConverter = selection; };
+      imports = [ extra ];
+    };
+  mmtsContract =
+    selection: extra:
+    let
+      c = mmtsConfig selection extra;
+      chosen = if selection == null then "dantto4k" else selection;
+      other = if chosen == "dantto4k" then "mmt2ts" else "dantto4k";
+      tuners = c.services.mirakurun.tunerSettings;
+      package = c.dtv.packages.${chosen};
+      path = map (p: p.outPath) c.systemd.services.mirakurun.path;
+      args = if chosen == "dantto4k" then "--frontend-descrambled - -" else "-i - -o -";
+    in
+    (builtins.head tuners).mmtsDecoder == "${lib.getExe' package chosen} ${args}"
+    && builtins.all (t: !(t ? mmtsDecoder)) (builtins.tail tuners)
+    &&
+      map (t: t.name) tuners == [
+        "convert"
+        "raw"
+        "terrestrial"
+        "remote"
+      ]
+    && builtins.elem package.outPath path
+    && !(builtins.elem c.dtv.packages.${other}.outPath path);
+  mmtsConvertersContract =
+    mmtsContract null { }
+    && mmtsContract "dantto4k" { }
+    && mmtsContract "mmt2ts" { }
+    && mmtsContract "mmt2ts" { dtv.packages.mmt2ts = fakeExe "replacement-mmt2ts"; }
+    && mmtsContract "dantto4k" { dtv.packages.dantto4k = fakeExe "replacement-dantto4k"; }
+    &&
+      builtins.all
+        (
+          selection:
+          let
+            c = mmtsConfig selection {
+              dtv.tuners = lib.mkForce [
+                {
+                  driver = "remote";
+                  mode = [ "BS4K" ];
+                  remote.host = "upstream.example";
+                }
+              ];
+            };
+          in
+          !(hasNamedPackage "dantto4k" c.systemd.services.mirakurun.path)
+          && !(hasNamedPackage "mmt2ts" c.systemd.services.mirakurun.path)
+        )
+        [
+          "dantto4k"
+          "mmt2ts"
+        ];
+
   captureRecorder = pkgs.writeShellScriptBin "recisdb" ''
     printf '%s\n' "$@"
   '';
@@ -753,6 +847,7 @@ let
     && require "disabled tuner entries" disabledEntryContract
     && require "remote EPGStation" remoteEpgstationContract
     && require "package replacement" packageReplacementContract
+    && require "MMTS converter selection" mmtsConvertersContract
     && require "export helpers" helperContract
     && require "invalid inventories" invalidContract
     && require "PT4K exclusive modes" pt4kModesContract;

@@ -93,6 +93,16 @@ An output's presence is not a claim that it was built on that platform. HonomiTV
 verification and time-range extraction. See the
 [package contract](pkgs/mmt2ts/README.md) for usage and validation boundaries.
 
+Select the converter for Mirakurun's non-remote BS4K tuners in configuration:
+
+```nix
+dtv.mmtsConverter = "mmt2ts"; # or "dantto4k" (the default)
+```
+
+Only the selected converter is added as a dependency. Per-tuner
+`mmtsDecoder = false` disables conversion. Override the selected package through
+`dtv.packages.mmt2ts` or `dtv.packages.dantto4k`.
+
 ## Binary cache
 
 To use prebuilt packages from [jodtv.cachix.org](https://jodtv.cachix.org),

@@ -130,6 +130,17 @@ let
     name: config.boot.kernelPackages.callPackage drivers.${name}.file { }
   );
   has4k = t: builtins.elem "BS4K" t.mode;
+  mmtsConverters = {
+    dantto4k = {
+      package = cfg.packages.dantto4k;
+      command = "${lib.getExe' cfg.packages.dantto4k "dantto4k"} --frontend-descrambled - -";
+    };
+    mmt2ts = {
+      package = cfg.packages.mmt2ts;
+      command = "${lib.getExe' cfg.packages.mmt2ts "mmt2ts"} -i - -o -";
+    };
+  };
+  mmtsConverter = mmtsConverters.${cfg.mmtsConverter};
   recorder =
     t:
     if
@@ -291,7 +302,7 @@ let
           checkDevicePath = t.device;
         }
         // lib.optionalAttrs (has4k t && t.mmtsDecoder) {
-          mmtsDecoder = "${lib.getExe' cfg.packages.dantto4k "dantto4k"} --frontend-descrambled - -";
+          mmtsDecoder = mmtsConverter.command;
         }
     );
   dependencies =
@@ -299,7 +310,7 @@ let
     t.packages
     ++ lib.optional (isLocal t) (recorder t)
     ++ lib.optional (t.driver == "hiraku") cfg.packages.hiraku
-    ++ lib.optional (t.driver != "remote" && has4k t && t.mmtsDecoder) cfg.packages.dantto4k;
+    ++ lib.optional (t.driver != "remote" && has4k t && t.mmtsDecoder) mmtsConverter.package;
   modes = lib.concatMap (
     t:
     [
@@ -356,7 +367,12 @@ in
       defaultText = lib.literalExpression ''"''${pkgs.a865r-firmware}/lib/firmware/a865r/AVer857BDA.sys"'';
       description = "A865R SYS or raw FW; defaults to the SYS extracted from the pinned Windows installer.";
     };
-    packages = lib.genAttrs [ "recisdb" "recdvb" "hiraku" "dantto4k" ] (
+    mmtsConverter = mkOption {
+      type = types.enum (builtins.attrNames mmtsConverters);
+      default = "dantto4k";
+      description = "MMT/TLV to TS converter for non-remote BS4K tuners with mmtsDecoder enabled.";
+    };
+    packages = lib.genAttrs [ "recisdb" "recdvb" "hiraku" "dantto4k" "mmt2ts" ] (
       name: lib.mkPackageOption pkgs name { }
     );
     casProxy = mkOption {
@@ -461,7 +477,7 @@ in
               mmtsDecoder = mkOption {
                 type = types.bool;
                 default = true;
-                description = "Use dantto4k for a non-remote BS4K MMTS stream.";
+                description = "Convert a non-remote BS4K MMTS stream using dtv.mmtsConverter.";
               };
               settings = mkOption {
                 type = settingsType;

@@ -26,8 +26,22 @@ python3 scripts/bump-deps.py mmt2ts
 Acceptance requires a native build, upstream tests and installed-command checks.
 Evaluation on another platform is recorded separately from a native build.
 Broadcast-stream conversion and player compatibility require a suitable media
-sample; synthetic upstream tests do not establish those results. This standalone
-package does not change tuner commands, services or the existing BS4K converter.
+sample; synthetic upstream tests do not establish those results.
+
+## Mirakurun integration
+
+Set `dtv.mmtsConverter = "mmt2ts";` to use mmt2ts for the generated BS4K
+`mmtsDecoder` command. `"dantto4k"` remains the default. The module selects the
+matching command arguments (`-i - -o -` for mmt2ts,
+`--frontend-descrambled - -` for dantto4k) and package dependency together.
+Both receive MMT/TLV already descrambled by the capture process. Only non-remote
+BS4K tuners with `mmtsDecoder = true` use the converter. Remote Mirakurun tuners
+continue to use the remote server's decoder. `dtv.packages.mmt2ts` and
+`dtv.packages.dantto4k` allow package overrides.
+
+Regression acceptance covers the default and both explicit selections, generated
+Mirakurun decoder commands, package overrides and absence of the other converter
+from generated service dependencies, including disabled/non-BS4K/remote tuners.
 
 Validated on 2026-10-24: v0.1.5 built natively on aarch64-darwin with Go 1.26.10;
 the complete upstream test suite and all three installed-command checks passed.

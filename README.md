@@ -63,6 +63,16 @@ MMT/TLV と MPEG-2 TS の相互変換、解析・検証、時間範囲による�
 Linux と macOS 向けの独立パッケージです。利用例と検証範囲は
 [パッケージ仕様](pkgs/mmt2ts/README.md)を参照してください。
 
+Mirakurun の BS4K 変換は設定で切り替えられます。
+
+```nix
+dtv.mmtsConverter = "mmt2ts"; # または "dantto4k"（既定値）
+```
+
+BS4K の非 remote チューナーで選択したツールだけを使用します。
+`dtv.tuners[].mmtsDecoder = false` で変換を無効にできます。
+パッケージの差し替えには `dtv.packages.mmt2ts` / `dtv.packages.dantto4k` を使います。
+
 ## バイナリキャッシュ
 
 [jodtv.cachix.org](https://jodtv.cachix.org) のビルド済みパッケージを利用するには、
