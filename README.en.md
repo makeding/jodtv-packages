@@ -1,5 +1,26 @@
 # jodtv-packages
 
+## Shared CAS proxy and database management
+
+Enable `services.casproxyserver` on A and configure `settings.listenIp`,
+`settings.port`, and `settings.allowedIps`. On B (Colmena):
+
+```nix
+{ nodes, ... }: {
+  dtv.casProxy = nodes.A.config.dtv.exports.casProxy;
+}
+```
+
+Local BS4K/B61 capture through Mirakurun or Hirakud automatically passes
+`--cas-proxy` to recisdb/recdvb. Set a tuner's `casProxy = null` to use its local
+reader. A wildcard listener needs `services.casproxyserver.advertiseAddress`
+reachable from B. A retains control of its allowlist and firewall.
+
+EPGStation's existing NixOS module already manages MariaDB startup, database
+creation and password provisioning; hosts need not duplicate `initialDatabases`
+or `ensureUsers`. Existing data and credentials are retained. See
+[service ownership](docs/service-ownership.md) for the contract and validation.
+
 [日本語](README.md) | **English**
 
 Japanese digital TV packages and reusable NixOS modules.

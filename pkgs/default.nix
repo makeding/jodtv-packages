@@ -1,6 +1,7 @@
 { callPackage, inputs }:
 {
   a865r-firmware = callPackage ./a865r-firmware/package.nix { };
+  amatsukaze = callPackage ./amatsukaze/package.nix { };
   casproxyserver = callPackage ./casproxyserver/package.nix { };
   dantto4k = callPackage ./dantto4k/package.nix { };
   edcb-wine = callPackage ./edcb-wine/package.nix { };
@@ -22,6 +23,7 @@
   mirakc = callPackage ./mirakc/package.nix { };
   mirakc-arib = callPackage ./mirakc-arib/package.nix { };
   mirakurun = callPackage ./mirakurun/package.nix { };
+  nvencc = callPackage ./nvencc/package.nix { };
   pcsc-rw5100 = callPackage ./pcsc-rw5100/package.nix { };
   psisiarc = callPackage ./psisiarc/package.nix { };
   psisimux = callPackage ./psisimux/package.nix { };

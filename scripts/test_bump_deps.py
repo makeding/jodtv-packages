@@ -74,11 +74,13 @@ class BumpTests(unittest.TestCase):
 
     def test_dependency_caches_and_release_policy(self):
         args = argparse.Namespace(version=None, system="x86_64-linux", build=False)
-        cmds = list(bump.commands(["honomitv", "epgstation-h", "recisdb", "qsvencc"], args))
+        cmds = list(bump.commands(["honomitv", "epgstation-h", "recisdb", "qsvencc", "amatsukaze", "nvencc"], args))
         self.assertEqual(cmds[0][-2:], ["--subpackage", "frontend"])
         self.assertEqual(cmds[1][-2:], ["--subpackage", "clientDir"])
         self.assertEqual(cmds[2][cmds[2].index("--version") + 1], "skip")
         self.assertEqual(cmds[3][cmds[3].index("--version") + 1], "stable")
+        for command in cmds[4:]:
+            self.assertEqual(command[command.index("--version") + 1], "stable")
 
     def test_linux_package_updates_use_native_full_inventory(self):
         args = argparse.Namespace(version=None, system="aarch64-darwin", build=False)

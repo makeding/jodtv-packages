@@ -21,6 +21,8 @@ let
     }).config;
   disabled = configOf { };
   enabled = configOf {
+    # Generate the actual service YAML on the check host.
+    nixpkgs.overlays = [ (_final: _prev: { inherit (pkgs) formats; }) ];
     services.casproxyserver = {
       enable = true;
       openFirewall = true;
@@ -82,7 +84,7 @@ in
         ""
         "${lib.getExe enabled.services.pcscd.package} -f -c /etc/reader.conf --debug"
       ];
-    assert lib.hasInfix (lib.getExe polkit.services.pcscd.package) (
+    assert lib.hasInfix (builtins.unsafeDiscardStringContext (lib.getExe polkit.services.pcscd.package)) (
       builtins.elemAt polkit.systemd.services.pcscd.serviceConfig.ExecStart 1
     );
     assert lib.hasInfix " -x " (
@@ -99,6 +101,9 @@ in
     assert epg.services.epgstation.settings.mysql.socketPath == "/run/mysqld/mysqld.sock";
     assert builtins.elem "mysql.service" epg.systemd.services.epgstation.after;
     pkgs.runCommand "casproxyserver-module" { } ''
+      grep -Fx 'listenIp: 0.0.0.0' ${enabled.environment.etc."casproxyserver.yml".source}
+      grep -Fx 'port: 24001' ${enabled.environment.etc."casproxyserver.yml".source}
+      grep -F '192.0.2.0/24' ${enabled.environment.etc."casproxyserver.yml".source}
       touch $out
     '';
 }

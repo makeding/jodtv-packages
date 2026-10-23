@@ -68,11 +68,13 @@
             "ffmpeg-libaribtlv"
           ];
           x86Only = [
+            "amatsukaze"
             "edcb-wine"
             "honomitv"
             "konomitv"
             "intel-media-sdk-h"
             "qsvencc"
+            "nvencc"
           ];
           names =
             if system == "aarch64-darwin" then
@@ -92,12 +94,14 @@
         default = {
           imports = with self.nixosModules; [
             packages
+            amatsukaze
             dtv
             edcb-wine
             honomitv
           ];
         };
         edcb-wine = ./modules/edcb-wine;
+        amatsukaze = ./modules/amatsukaze.nix;
         casproxyserver = ./modules/casproxyserver.nix;
         hirakud = ./modules/hirakud.nix;
         honomitv = ./modules/honomitv;

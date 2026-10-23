@@ -155,8 +155,12 @@ let
       esac
       exec ${lib.getExe' cfg.packages.recisdb "recisdb"} tune --channel "$channel" "$@"
     '';
-  casProxyArgs = t: fourK:
-    lib.optionals (fourK && t.b61 && t.casProxy != null) [ "--cas-proxy" t.casProxy ];
+  casProxyArgs =
+    t: fourK:
+    lib.optionals (fourK && t.b61 && t.casProxy != null) [
+      "--cas-proxy"
+      t.casProxy
+    ];
   localCommand =
     t: fourK:
     if

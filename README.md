@@ -156,6 +156,27 @@ dtv.tuners = [{
 
 ## 設定例
 
+CAS プロキシは `services.casproxyserver.enable = true` で有効にできます。
+A の `settings.listenIp`、`settings.port`、`settings.allowedIps` を設定し、
+B は次の参照だけでローカル BS4K/B61 録画に利用できます。
+
+```nix
+# B (Colmena)
+{ nodes, ... }: {
+  dtv.casProxy = nodes.A.config.dtv.exports.casProxy;
+}
+```
+
+Mirakurun/Hirakud の recisdb/recdvb コマンドに `--cas-proxy` が追加されます。
+チューナー単位の `casProxy = null` でローカルカードに戻せます。
+A が `0.0.0.0` で待ち受ける場合は `services.casproxyserver.advertiseAddress` に
+B から到達できるアドレスを指定してください。A の許可ネットワークとファイアウォールは
+A で管理します。詳細は [サービス管理](docs/service-ownership.md) を参照してください。
+
+EPGStation の MariaDB 起動・DB 作成・パスワード設定は既存の NixOS モジュールが
+管理します。利用側で同じ DB の `initialDatabases` / `ensureUsers` を重複定義する
+必要はありません。既存データやパスワードを移行する変更ではありません。
+
 三点セットと分離構成は [samples](samples/README.md) を参照してください。
 
 ## 原版パッケージの選択

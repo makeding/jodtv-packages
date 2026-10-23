@@ -151,3 +151,4 @@ in
 // import ./honomitv.nix { inherit pkgs; }
 // import ./upstream.nix { inherit self nixpkgs pkgs; }
 // import ./edcb-wine.nix { inherit self nixpkgs pkgs; }
+// import ./casproxyserver.nix { inherit self nixpkgs pkgs; }

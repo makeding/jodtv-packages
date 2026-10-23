@@ -8,6 +8,7 @@ let
   linuxPkgs = import nixpkgs {
     system = "x86_64-linux";
     overlays = [ self.overlays.default ];
+    config.allowUnfreePredicate = package: lib.getName package == "nvencc";
   };
   configOf =
     module:
@@ -18,6 +19,7 @@ let
         {
           system.stateVersion = "26.05";
           boot.isContainer = true;
+          nixpkgs.config.allowUnfreePredicate = package: lib.getName package == "nvencc";
         }
         module
       ];
