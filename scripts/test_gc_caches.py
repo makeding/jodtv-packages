@@ -44,6 +44,28 @@ class CacheRetentionTests(unittest.TestCase):
         self.assertIn("outputPath = p.outPath", projection)
         self.assertNotIn("inherit (p) drvPath outPath", projection)
 
+    def test_v4_fixed_output_is_queried_and_protected(self):
+        root = {"pkg": {"drvPath": f"/nix/store/{A}-pkg.drv", "outputPath": f"/nix/store/{B}-pkg"}}
+        drv = f"{C}-crate-windows_aarch64_msvc-0.53.1.tar.gz.drv"
+        document = {"version": 4, "derivations": {drv: {
+            "outputs": {"out": {"hash": "sha256-" + "A" * 43 + "=", "method": "flat"}},
+            "inputs": {"srcs": []},
+        }}}
+        for result in [f"/nix/store/{D}-crate.tar.gz\n", "", "\n", "invalid\n"]:
+            with self.subTest(result=result), \
+                 patch.object(gc, "nix_json", side_effect=[root, document]), \
+                 patch.object(gc.subprocess, "check_output", return_value=result) as query:
+                if result.startswith("/nix/store/"):
+                    _, protected = gc.current_paths("x86_64-linux")
+                    self.assertTrue({B, C, D} <= protected)
+                    self.assertFalse(gc.github_plan([entry(1, D + ".narinfo-aB12")], protected, set(), REF))
+                else:
+                    with self.assertRaises(ValueError):
+                        gc.current_paths("x86_64-linux")
+                query.assert_called_once_with(
+                    ["nix-store", "--query", "--outputs", f"/nix/store/{drv}"], text=True,
+                )
+
     def test_empty_package_inventory_and_unknown_output_abort(self):
         with patch.object(gc, "nix_json", return_value={}):
             with self.assertRaisesRegex(ValueError, "empty"):

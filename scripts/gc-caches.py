@@ -71,10 +71,25 @@ def current_paths(system):
     paths = {root["outputPath"] for root in roots.values()}
     for drv, data in document.get("derivations", document).items():
         paths.add(drv)
+        queried_outputs = False
         for output in data["outputs"].values():
             if not output.get("path"):
-                raise ValueError(f"Cannot determine output path for {drv}")
-            paths.add(output["path"])
+                # JSON v4 omits paths for fixed content-addressed outputs.
+                # Let Nix compute them rather than trusting builder env values
+                # or reimplementing its store-path hashing algorithm.
+                if not output.get("hash") or not output.get("method"):
+                    raise ValueError(f"Cannot determine output path for {drv}")
+                if not queried_outputs:
+                    drv_path = str(PurePosixPath("/nix/store") / drv)
+                    outputs = subprocess.check_output(
+                        ["nix-store", "--query", "--outputs", drv_path], text=True,
+                    ).splitlines()
+                    if len(outputs) != len(data["outputs"]) or not all(outputs):
+                        raise ValueError(f"Cannot determine output paths for {drv}")
+                    paths.update(outputs)
+                    queried_outputs = True
+            else:
+                paths.add(output["path"])
         paths.update(data["inputSrcs"] if "inputSrcs" in data else data["inputs"]["srcs"])
     return roots, {store_hash(path) for path in paths}
 
