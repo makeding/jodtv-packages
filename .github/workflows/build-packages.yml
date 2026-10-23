@@ -13,7 +13,7 @@ on:
       - '.github/workflows/build-packages.yml'
   # GITHUB_TOKEN pushes from the updater do not trigger push workflows.
   workflow_run:
-    workflows: ['Bump packages']
+    workflows: ['Bump packages', 'Bump nixpkgs']
     types: [completed]
   workflow_dispatch:
     inputs:
