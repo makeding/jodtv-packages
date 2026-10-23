@@ -199,12 +199,7 @@ let
       ++ [ "-" ]
     else
       [
-        (
-          if fourK then
-            lib.getExe' cfg.packages.recdvb4k "recdvb4k"
-          else
-            lib.getExe' cfg.packages.recdvb "recdvb"
-        )
+        (lib.getExe' cfg.packages.recdvb "recdvb")
         "--dev"
         (if t.device != null then t.device else "")
       ]
@@ -262,10 +257,7 @@ let
     "${script} <channel>";
   bs4kCommand =
     t:
-    has4k t
-    && (
-      t.driver == "tbs6812" || t.driver == "hiraku" && t.hiraku.modeBS4K != null || t.commandBS4K != [ ]
-    );
+    has4k t && (isLocal t || t.driver == "hiraku" && t.hiraku.modeBS4K != null || t.commandBS4K != [ ]);
   nativeTuner =
     t:
     t.settings
@@ -356,7 +348,7 @@ in
       defaultText = lib.literalExpression ''"''${pkgs.a865r-firmware}/lib/firmware/a865r/AVer857BDA.sys"'';
       description = "A865R SYS or raw FW; defaults to the SYS extracted from the pinned Windows installer.";
     };
-    packages = lib.genAttrs [ "recisdb" "recdvb" "recdvb4k" "hiraku" "dantto4k" ] (
+    packages = lib.genAttrs [ "recisdb" "recdvb" "hiraku" "dantto4k" ] (
       name: lib.mkPackageOption pkgs name { }
     );
     tuners = mkOption {

@@ -8,6 +8,17 @@
   v4l-utils,
   libaribb25,
 }:
+let
+  # This dependency is private to recisdb's recdvb-compatible IF interface.
+  recisdbDvb =
+    (v4l-utils.override {
+      withGUI = false;
+      withBPF = false;
+    }).overrideAttrs
+      (old: {
+        patches = (old.patches or [ ]) ++ [ ./libdvbv5-isdbs-if.patch ];
+      });
+in
 rustPlatform.buildRustPackage {
   pname = "recisdb";
   version = "1.3.0-unstable-2026-10-22";
@@ -33,12 +44,8 @@ rustPlatform.buildRustPackage {
     libaribb61
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
-    (v4l-utils.override {
-      withGUI = false;
-      withBPF = false;
-    })
+    recisdbDvb
   ];
-
 
   postPatch = ''
     cat > b25-sys/build.rs <<'EOF'
@@ -53,6 +60,7 @@ rustPlatform.buildRustPackage {
     }
     EOF
   '';
+  passthru.libdvbv5 = recisdbDvb;
   meta = {
     description = "ISDB recorder with injectable B25/B61 decoders and Linux DVB support";
     homepage = "https://github.com/makeding/recisdb-rs";

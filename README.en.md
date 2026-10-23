@@ -152,6 +152,29 @@ Smart-card readers are optional and independent of recorder decoding flags.
 
 See [samples](samples/README.en.md) for the three-service setup and split capture/frontend configurations.
 
+## Selecting upstream packages
+
+HonomiTV and the EPGStation fork remain the defaults. Select
+`pkgs.konomitv` (tsukumijima/KonomiTV) and `pkgs.epgstation-upstream`
+(l3tnun/EPGStation) explicitly to use the original projects.
+`pkgs.epgstation` continues to refer to `pkgs.epgstation-h`.
+
+```nix
+{ pkgs, ... }: {
+  services.honomitv.package = pkgs.konomitv;
+  dtv.epgstation.package = pkgs.epgstation-upstream;
+  # Without dtv:
+  # services.epgstation.package = pkgs.epgstation-upstream;
+}
+```
+
+Use the existing service modules and settings. KonomiTV has an independent
+upstream source pin and Python 3.13 / uv lock. Shared packaging adapts Nix tool
+paths, writable state and direct HTTP serving; it does not import fork feature
+patches. TLS termination belongs to the consumer. Upstream EPGStation does not
+support the fork-only `epgUpdaterMode = "external"` setting. Selecting a package
+does not migrate databases or configuration between variants.
+
 ## HonomiTV configuration
 
 `services.honomitv.settings` and `encoder` seed `config.yaml` only when it does not
@@ -187,22 +210,51 @@ setups, including external `libaribb25` injection. To use it in a tuner, supply
 an explicit `dtv.tuners[].command` with recpt1 arguments and add `pkgs.recpt1`
 to that entry's `packages`. Generated PT3/PX4 commands use recisdb by default.
 
+## recdvb
+
+`recdvb` supports B25 TS and B61 MMT/TLV recording in one package. Both features
+are enabled by default; select `--b25` or `--b61` when recording, or omit both
+for raw output. `--cas-proxy host:port` selects a B61 card proxy.
+The installed tools are `recdvb`, `recpt1ctl`, `chkdvbsignal` and `tssplitter_lite`.
+Generated DVB commands use `dtv.packages.recdvb` for both ordinary and BS4K
+capture, preserving `b25`, `b61`, `args` and `argsBS4K` selection.
+
+Both libraries are independent package arguments. `withB25 = false` and
+`withB61 = false` omit the corresponding feature and dependency. Consumers
+requiring different PC/SC implementations must keep those implementations in
+separate recorder processes; build isolated instances from this same definition.
+
+```nix
+recdvb.override {
+  libaribb25 = myB25Library;
+  libaribb61 = myB61Library;
+}
+```
+
+Validation covers dependency replacement, feature configuration, installed CLI
+names/options, and generated Mirakurun/Hirakud command arguments. Linux builds
+and actual tuning/descrambling are separate checks.
+
+```sh
+nix build --no-link .#checks.x86_64-linux.recdvb-configure \
+  .#checks.x86_64-linux.recdvb-capture .#recdvb
+```
+
 ## libaribb61
 
 `libaribb61` is an independent streaming MMT/TLV ACAS descrambler library,
 exported through the package set and overlay on Linux and macOS. It installs
 `aribb61/arib_std_b61.h`, the shared library and `libaribb61.pc` for pkg-config
 consumers. Build it with `nix build .#libaribb61`. Its C API resembles B25 but is
-not ABI compatible. `recdvb4k` links this library for `--b61`; configure requires
-both B25 and B61 support. The library can be replaced by a consumer overlay:
+not ABI compatible. `recdvb` links this library for `--b61`. The library can be
+replaced by a consumer overlay:
 
 ```nix
 final: prev: {
-  recdvb4k = prev.recdvb4k.override { libaribb61 = final.myB61Library; };
+  recdvb = prev.recdvb.override { libaribb61 = final.myB61Library; };
 }
 ```
 
-The ordinary `recdvb` package remains a separate B25-only build.
 The build runs the upstream core/C API tests and an installed C API consumer;
 card/proxy and real broadcast descrambling require separate runtime verification.
 

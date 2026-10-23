@@ -89,10 +89,24 @@ class BumpTests(unittest.TestCase):
 
     def test_dry_run_does_not_execute_and_deduplicates_alias(self):
         with patch.object(bump.subprocess, "run") as run, patch.object(bump.os, "execvp") as execute, patch("builtins.print") as output:
-            self.assertEqual(bump.main(["konomitv", "honomitv", "--dry-run"]), 0)
+            self.assertEqual(bump.main(["epgstation", "epgstation-h", "--dry-run"]), 0)
             run.assert_not_called()
             execute.assert_not_called()
             self.assertEqual(output.call_count, 2)
+
+    def test_upstream_variants_update_independently(self):
+        args = argparse.Namespace(version=None, system="x86_64-linux", build=False)
+        names = ["konomitv", "honomitv", "epgstation-upstream", "epgstation-h"]
+        self.assertTrue(set(names).issubset(bump.packages()))
+        cmds = list(bump.commands(names, args))
+        self.assertEqual([cmd[1] for cmd in cmds],
+                         [f"legacyPackages.x86_64-linux.{name}" for name in names])
+        self.assertEqual([cmd[-1] for cmd in cmds],
+                         ["frontend", "frontend", "clientDir", "clientDir"])
+        with patch.object(bump.subprocess, "run") as run, patch("builtins.print") as output:
+            self.assertEqual(bump.main([*names, "--dry-run"]), 0)
+            run.assert_not_called()
+            self.assertEqual(output.call_count, 8)
 
     def test_fail_fast_preserves_failure(self):
         with patch.object(bump, "prepare_branch"), patch.object(bump.shutil, "which", return_value="nix-update"), patch.object(bump.subprocess, "run") as run:

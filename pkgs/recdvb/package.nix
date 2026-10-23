@@ -2,12 +2,12 @@
   lib,
   stdenv,
   fetchFromGitHub,
-  cmake,
   pkg-config,
-  pkgs,
   libaribb25,
+  libaribb61,
   autoreconfHook,
-
+  withB25 ? true,
+  withB61 ? true,
 }:
 
 stdenv.mkDerivation rec {
@@ -20,14 +20,11 @@ stdenv.mkDerivation rec {
     rev = "15bf583fa632512993bc76cf55c6ad54d7599e71";
     hash = "sha256-ghi4stNSVmOv1A+WrY3pCSuJH9Z3BEYS9VR/4tXlITo=";
   };
-  # sourceRoot = "source/src";
   nativeBuildInputs = [
     pkg-config
-    pkgs.openssl
-    libaribb25
-    pkgs.pcsclite
     autoreconfHook
   ];
+  buildInputs = lib.optional withB25 libaribb25 ++ lib.optional withB61 libaribb61;
   postPatch = ''
     substituteInPlace Makefile.in \
       --replace-fail 'TARGET = recdvb4k' 'TARGET = recdvb' \
@@ -36,21 +33,41 @@ stdenv.mkDerivation rec {
       --replace-fail 'TARGET4 = tssplitter_lite4k' 'TARGET4 = tssplitter_lite'
   '';
   enableParallelBuilding = true;
-  configurePhase = ''
-    chmod +x autogen.sh
-    ./autogen.sh
-    ./configure --enable-b25 --prefix="$out/"
+  configureFlags = lib.optional withB25 "--enable-b25" ++ lib.optional withB61 "--enable-b61";
+  postConfigure = ''
+    ${
+      if withB25 then
+        "grep -q '^#define HAVE_LIBARIB25 1$' config.h"
+      else
+        "! grep -q '^#define HAVE_LIBARIB25 1$' config.h"
+    }
+    ${
+      if withB61 then
+        "grep -q '^#define HAVE_B61 1$' config.h"
+      else
+        "! grep -q '^#define HAVE_B61 1$' config.h"
+    }
+  '';
+  preInstall = ''
     mkdir -p "$out/bin"
   '';
-  makePhase = ''
-    make
-    make install
+  doInstallCheck = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
+  installCheckPhase = ''
+    runHook preInstallCheck
+    for command in recdvb recpt1ctl chkdvbsignal tssplitter_lite; do
+      test -x "$out/bin/$command"
+    done
+    "$out/bin/recdvb" --help > help.log 2>&1
+    ${if withB25 then "grep -q -- '--b25:' help.log" else "! grep -q -- '--b25:' help.log"}
+    ${if withB61 then "grep -q -- '--b61:' help.log" else "! grep -q -- '--b61:' help.log"}
+    runHook postInstallCheck
   '';
   meta = {
-    description = "Command-line recorder for Japanese ISDB broadcast tuners";
+    description = "ISDB recorder with optional B25 TS and B61 MMT/TLV descrambling";
     inherit (src.meta) homepage;
     license = lib.licenses.gpl3Plus;
-    platforms = lib.platforms.all;
+    platforms = lib.platforms.linux;
+    mainProgram = "recdvb";
     maintainers = [ lib.maintainers.huggy ];
   };
 }

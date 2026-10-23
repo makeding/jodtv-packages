@@ -158,6 +158,28 @@ dtv.tuners = [{
 
 三点セットと分離構成は [samples](samples/README.md) を参照してください。
 
+## 原版パッケージの選択
+
+既定の HonomiTV と EPGStation fork はそのまま利用できます。原版は
+`pkgs.konomitv`（tsukumijima/KonomiTV）と `pkgs.epgstation-upstream`
+（l3tnun/EPGStation）を明示的に選択してください。
+`pkgs.epgstation` は引き続き `pkgs.epgstation-h` を指します。
+
+```nix
+{ pkgs, ... }: {
+  services.honomitv.package = pkgs.konomitv;
+  dtv.epgstation.package = pkgs.epgstation-upstream;
+  # dtv を使わない場合:
+  # services.epgstation.package = pkgs.epgstation-upstream;
+}
+```
+
+既存のサービスモジュールと設定方法を使います。KonomiTV は独立した上流ソースと
+Python 3.13 / uv lock を利用します。Nix のパス・書き込み先・直接 HTTP 待ち受けの
+調整だけを共通化し、fork の機能パッチは取り込みません。TLS は利用側で終端します。
+原版 EPGStation では fork 固有の `epgUpdaterMode = "external"` は使えません。
+パッケージ指定だけではデータベースや設定の相互移行は行いません。
+
 ## HonomiTV の設定
 
 `services.honomitv.settings` と `encoder` は、`config.yaml` が存在しない場合だけ
@@ -189,15 +211,45 @@ DIY 用に `recpt1` の独立パッケージと overlay 属性を引き続き公
 `dtv.tuners[].command` に recpt1 の引数を明示し、その項目の `packages` に
 `pkgs.recpt1` を追加してください。PT3/PX4 の既定コマンドは recisdb です。
 
+## recdvb
+
+`recdvb` は B25 TS と B61 MMT/TLV の録画に対応します。既定では両方を有効にし、
+実行時に `--b25` または `--b61` を指定します。両方を省略すると未復号で出力します。
+`--cas-proxy host:port` は B61 のカードプロキシを指定します。
+`recdvb`、`recpt1ctl`、`chkdvbsignal`、`tssplitter_lite` をインストールします。
+DVB の通常録画と BS4K は共通の `dtv.packages.recdvb` を使い、
+`b25`、`b61`、`args`、`argsBS4K` で引数を選択します。
+
+`libaribb25` と `libaribb61` は独立して差し替えられます。
+`withB25 = false` または `withB61 = false` で該当機能と依存を除外できます。
+異なる PC/SC 実装が必要な構成は、同じパッケージ定義から個別にビルドし、
+録画プロセスを分離してください。
+
+```nix
+recdvb.override {
+  libaribb25 = myB25Library;
+  libaribb61 = myB61Library;
+}
+```
+
+依存の差し替え、機能の構成、インストール後のコマンド名・オプションと
+Mirakurun/Hirakud が生成する録画引数を検証します。
+Linux の実ビルド、実機の選局・復号はそれぞれ別の検証です。
+
+```sh
+nix build --no-link .#checks.x86_64-linux.recdvb-configure \
+  .#checks.x86_64-linux.recdvb-capture .#recdvb
+```
+
 ## libaribb61
 
 Linux/macOS 向けの独立した MMT/TLV ACAS デスクランブルライブラリです。
 パッケージ一覧と overlay で公開し、`nix build .#libaribb61` でビルドできます。
 ヘッダー `aribb61/arib_std_b61.h`、共有ライブラリ、pkg-config 用の
 `libaribb61.pc` をインストールします。C API は B25 に似ていますが ABI 互換ではありません。
-`recdvb4k` の `--b61` はこの共有ライブラリを使用し、ビルド時に B25/B61 の両方を必須にします。
-利用側で `recdvb4k.override { libaribb61 = myB61Library; }` により差し替えられます。
-通常の `recdvb` は独立した B25 専用ビルドです。上流の core/C API テストと
+`recdvb` の `--b61` はこの共有ライブラリを使用します。
+利用側で `recdvb.override { libaribb61 = myB61Library; }` により差し替えられます。
+上流の core/C API テストと
 インストール済みライブラリへの C API リンクを検証します。カード/プロキシや
 実放送のデスクランブルは別途実機での検証が必要です。
 

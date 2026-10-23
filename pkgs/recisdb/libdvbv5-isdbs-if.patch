@@ -1,0 +1,35 @@
+recisdb-only adaptation for the recdvb ISDB-S IF ABI.
+
+Built against v4l-utils 1.32.0. Keep SYS_ISDBS tuning/readback in kHz IF;
+leave DVB-S/S2 RF/LNB conversion intact. Automatic tuning-time SEC is
+bypassed; explicit DTV_VOLTAGE properties remain the caller's decision.
+Do not apply globally: other libdvbv5 clients may provide RF frequencies.
+Upstream submission is deferred pending review of the RF-facing API.
+
+--- a/lib/libdvbv5/dvb-sat.c
++++ b/lib/libdvbv5/dvb-sat.c
+@@ -592,7 +592,8 @@
+ 	const struct dvb_sat_lnb_priv *lnb = (void *)p->lnb;
+ 	int new_freq, i;
+ 
+-	if (!lnb || !dvb_fe_is_satellite(p->current_sys))
++	if (!lnb || !dvb_fe_is_satellite(p->current_sys) ||
++	    p->current_sys == SYS_ISDBS)
+ 		return freq;
+ 
+ 	new_freq = freq + parms->freq_offset;
+@@ -704,6 +705,14 @@
+ 	uint16_t t = 0;
+ 	int rc;
+ 
++	/* recisdb uses the recdvb ABI: ISDB-S frequencies are already IF, in
++	 * kHz. Do not subtract an LNB oscillator or change SEC settings. */
++	if (p->current_sys == SYS_ISDBS) {
++		parms->high_band = 0;
++		parms->freq_offset = 0;
++		return 0;
++	}
++
+ 	freq = dvb_sat_get_freq(p, &t);
+ 	if (!freq)
+ 		return -EINVAL;

@@ -16,18 +16,20 @@ from urllib.parse import quote, urlencode
 ROOT = Path(__file__).resolve().parent.parent
 # These track release tags; other packages track their default branch.
 RELEASES = {"mirakc", "mirakc-arib", "intel-media-sdk-h", "qsvencc", "psisimux", "tsreadex"}
-SUBPACKAGES = {"honomitv": "frontend", "epgstation-h": "clientDir"}
-ALIASES = {"konomitv": "honomitv", "epgstation": "epgstation-h"}
-EXCLUDED = {"konomitv", "ffmpeg-libaribtlv"}
+SUBPACKAGES = {"honomitv": "frontend", "konomitv": "frontend",
+               "epgstation-h": "clientDir", "epgstation-upstream": "clientDir"}
+ALIASES = {"epgstation": "epgstation-h"}
+EXCLUDED = {"ffmpeg-libaribtlv"}
 MANIFESTS = {
     "epgstation-h": ("package.json", "json"),
+    "epgstation-upstream": ("package.json", "json"),
+    "konomitv": ("server/pyproject.toml", "project"),
     "honomitv": ("server/pyproject.toml", "project"),
     "mirakurun": ("package.json", "json"),
     "recisdb": ("recisdb-rs/Cargo.toml", "package"),
     **{name: ("CMakeLists.txt", "cmake") for name in
        ("libaribb25", "libaribb61", "libaribtlv", "librw5100", "pcsc-rw5100")},
     "recdvb": ("configure.ac", "autoconf"),
-    "recdvb4k": ("configure.ac", "autoconf"),
     "recpt1": ("recpt1/configure.ac", "autoconf"),
     "tsreplace": ("app/rgy_version.h", "header"),
 }
@@ -137,7 +139,7 @@ def commands(names, args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("packages", nargs="*", help="package names (also accepts konomitv and epgstation aliases)")
+    parser.add_argument("packages", nargs="*", help="package names (also accepts the epgstation alias)")
     parser.add_argument("--all", action="store_true", help="update all supported packages serially")
     parser.add_argument("--list", action="store_true", help="list supported packages")
     parser.add_argument("--dry-run", action="store_true", help="print commands without network access or writes")

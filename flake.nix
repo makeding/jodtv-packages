@@ -57,6 +57,7 @@
           darwin = [
             "a865r-firmware"
             "epgstation-h"
+            "epgstation-upstream"
             "hiraku"
             "libaribb61"
             "libaribtlv"

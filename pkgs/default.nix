@@ -4,13 +4,16 @@
   casproxyserver = callPackage ./casproxyserver/package.nix { };
   dantto4k = callPackage ./dantto4k/package.nix { };
   epgstation-h = callPackage ./epgstation-h/package.nix { };
+  epgstation-upstream = callPackage ./epgstation-upstream/package.nix { };
   ffmpeg-libaribtlv = callPackage ./ffmpeg-libaribtlv/package.nix { };
   hiraku = callPackage ./hiraku/package.nix { };
   honomitv = callPackage ./honomitv/package.nix {
     inherit (inputs) pyproject-nix uv2nix pyproject-build-systems;
   };
   intel-media-sdk-h = callPackage ./intel-media-sdk-h/package.nix { };
-  konomitv = callPackage ./konomitv/package.nix { };
+  konomitv = callPackage ./konomitv/package.nix {
+    inherit (inputs) pyproject-nix uv2nix pyproject-build-systems;
+  };
   libaribb25 = callPackage ./libaribb25/package.nix { };
   libaribb61 = callPackage ./libaribb61/package.nix { };
   libaribtlv = callPackage ./libaribtlv/package.nix { };
@@ -23,7 +26,6 @@
   psisimux = callPackage ./psisimux/package.nix { };
   qsvencc = callPackage ./qsvencc/package.nix { };
   recdvb = callPackage ./recdvb/package.nix { };
-  recdvb4k = callPackage ./recdvb4k/package.nix { };
   recisdb = callPackage ./recisdb/package.nix { };
   recpt1 = callPackage ./recpt1/package.nix { };
   tsreadex = callPackage ./tsreadex/package.nix { };
