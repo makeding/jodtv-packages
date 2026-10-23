@@ -23,10 +23,10 @@ callPackage ./build.nix (
     src = fetchFromGitHub {
       owner = "makeding";
       repo = "HonomiTV";
-      rev = "a86fdeb35956a9378803d89ccb78b7e2c72247de";
-      hash = "sha256-wqbXTKRQlL660SavsuQkd+9yLb/SGm/4MmgsBIP1ESE=";
+      rev = "e635fe9165ca680cc80f24ec5c409c23ee2f2af3";
+      hash = "sha256-vZkCS6cp1YIXkbyRZZBX5YFr0xW4ttu7Pc/DpC5sNuo=";
     };
-    yarnHash = "sha256-cfTe1kENLpRxNW+NSwg554LnYlUPQ2/EPRhUrrYXUIk=";
+    yarnHash = "sha256-3fMgAeiZOF6J4JmtcFj1XMhc7anEx6NJPXzLcy8U+Rw=";
     description = "HonomiTV fork of KonomiTV: Kept Organized, Notably Optimized, Modern Interface TV media server";
     homepage = "https://github.com/makeding/HonomiTV";
   }
