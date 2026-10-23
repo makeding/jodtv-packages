@@ -50,16 +50,16 @@ class CacheRetentionTests(unittest.TestCase):
             B: info(NAR_B, [f"{C}-runtime"]),
             C: info(NAR_C),
         }[value])
-        paths, nars = gc.cached_closure({A}, {A, C, D}, lookup)
-        self.assertEqual(paths, {A, C})
+        paths, nars = gc.cached_closure({A}, lookup)
+        self.assertEqual(paths, {A, B, C})
         self.assertEqual(nars, {NAR_A, NAR_B, NAR_C})
         self.assertEqual(lookup.call_count, 3)
 
     def test_missing_closure_and_unknown_nar_hash_abort(self):
         with self.assertRaisesRegex(ValueError, "missing"):
-            gc.cached_closure({A}, set(), lambda _: None)
+            gc.cached_closure({A}, lambda _: None)
         with self.assertRaisesRegex(ValueError, "NAR hash"):
-            gc.cached_closure({A}, {A}, lambda _: {"narHash": "bad"})
+            gc.cached_closure({A}, lambda _: {"narHash": "bad"})
 
     def test_plan_keeps_cached_build_dependency_closure_and_verifies_roots(self):
         api, upstream = Mock(), Mock()
@@ -71,7 +71,7 @@ class CacheRetentionTests(unittest.TestCase):
             f"/api/v1/cache/jodtv/{C}.narinfo": info(NAR_C),
         }[path]
         obsolete, protected, nars = gc.cachix_plan(
-            api, upstream, "jodtv", {"pkg": {"outPath": f"/nix/store/{A}-pkg"}}, {A, B}, [],
+            api, upstream, "jodtv", {"pkg": {"outPath": f"/nix/store/{A}-pkg"}}, {A, B}, [], REF,
         )
         self.assertEqual(obsolete, {D})
         self.assertEqual(protected, {A, B, C})
@@ -83,7 +83,7 @@ class CacheRetentionTests(unittest.TestCase):
         api.request.side_effect = [[D], []]
         upstream.request.return_value = f"NarHash: sha256:{NAR_A}\nReferences: \n"
         obsolete, protected, _ = gc.cachix_plan(
-            api, upstream, "jodtv", {"pkg": {"outPath": f"{A}-pkg"}}, {A}, [],
+            api, upstream, "jodtv", {"pkg": {"outPath": f"{A}-pkg"}}, {A}, [], REF,
         )
         self.assertEqual(obsolete, {D})
         self.assertIn(A, protected)
@@ -98,16 +98,13 @@ class CacheRetentionTests(unittest.TestCase):
         }[path]
         with patch("builtins.print"):
             obsolete, protected, nars = gc.cachix_plan(
-                api, Mock(), "jodtv", {}, {C}, [entry(1, A + ".narinfo-aB12")]
+                api, Mock(), "jodtv", {}, {C}, [entry(1, A + ".narinfo-aB12")], REF
             )
         self.assertFalse(obsolete)
         self.assertEqual(protected, {A, B, C})
-        self.assertEqual(nars, {NAR_A})
+        self.assertIsNone(nars)
         self.assertFalse(gc.github_plan([entry(1, NAR_A + ".nar.zstd-aB12")], protected, nars, REF))
-        self.assertEqual(
-            [item["id"] for item in gc.github_plan([entry(1, NAR_C + ".nar.zstd-aB12")], protected, nars, REF)],
-            [1],
-        )
+        self.assertFalse(gc.github_plan([entry(1, NAR_C + ".nar.zstd-aB12")], protected, nars, REF))
 
     def test_pins_do_not_skip_current_root_availability_validation(self):
         api, upstream = Mock(), Mock()
@@ -115,7 +112,7 @@ class CacheRetentionTests(unittest.TestCase):
         upstream.request.return_value = None
         with self.assertRaisesRegex(ValueError, "missing from both caches"):
             gc.cachix_plan(
-                api, upstream, "jodtv", {"pkg": {"outPath": f"{B}-pkg"}}, {B}, []
+                api, upstream, "jodtv", {"pkg": {"outPath": f"{B}-pkg"}}, {B}, [], REF
             )
         self.assertEqual(api.request.call_count, 1)
         upstream.request.assert_called_once_with(f"/{B}.narinfo", missing_ok=True, text=True)
@@ -123,25 +120,37 @@ class CacheRetentionTests(unittest.TestCase):
     def test_protected_github_narinfo_keeps_upstream_nar(self):
         api, upstream = Mock(), Mock()
         api.request.side_effect = [[D], []]
-        upstream.request.return_value = f"NarHash: sha256:{NAR_C}\nReferences: \n"
+        upstream.request.side_effect = [
+            f"NarHash: sha256:{NAR_C}\nReferences: {B}-runtime\n",
+            f"NarHash: sha256:{NAR_B}\nReferences: \n",
+        ]
         obsolete, protected, nars = gc.cachix_plan(
             api,
             upstream,
             "jodtv",
             {"pkg": {"outPath": f"{C}-pkg"}},
             {C},
-            [entry(1, C + ".narinfo-aB12"), entry(2, NAR_C + ".nar.zstd-aB12")],
+            [
+                entry(1, C + ".narinfo-aB12"),
+                entry(2, B + ".narinfo-aB12"),
+                entry(3, NAR_C + ".nar.zstd-aB12"),
+                entry(4, NAR_B + ".nar.zstd-aB12"),
+            ],
+            REF,
         )
         self.assertEqual(obsolete, {D})
-        self.assertIn(C, protected)
-        self.assertEqual(nars, {NAR_C})
-        self.assertFalse(gc.github_plan([entry(2, NAR_C + ".nar.zstd-aB12")], protected, nars, REF))
+        self.assertEqual(protected, {B, C})
+        self.assertEqual(nars, {NAR_B, NAR_C})
+        self.assertFalse(gc.github_plan(
+            [entry(2, B + ".narinfo-aB12"), entry(3, NAR_C + ".nar.zstd-aB12"), entry(4, NAR_B + ".nar.zstd-aB12")],
+            protected, nars, REF,
+        ))
 
     def test_missing_metadata_for_protected_github_narinfo_aborts(self):
         api, upstream = Mock(), Mock()
         api.request.side_effect = [[D]]
         upstream.request.return_value = None
-        with self.assertRaisesRegex(ValueError, "Cannot determine NAR hash"):
+        with self.assertRaisesRegex(ValueError, "missing from both caches"):
             gc.cachix_plan(
                 api,
                 upstream,
@@ -149,7 +158,26 @@ class CacheRetentionTests(unittest.TestCase):
                 {},
                 {C},
                 [entry(1, C + ".narinfo-aB12")],
+                REF,
             )
+
+    def test_other_branch_magic_metadata_does_not_gate_default_gc(self):
+        api, upstream = Mock(), Mock()
+        api.request.side_effect = [[D], []]
+        upstream.request.return_value = f"NarHash: sha256:{NAR_A}\nReferences: \n"
+        obsolete, protected, nars = gc.cachix_plan(
+            api,
+            upstream,
+            "jodtv",
+            {"pkg": {"outPath": f"{A}-pkg"}},
+            {A},
+            [entry(1, B + ".narinfo-aB12", "refs/heads/feature")],
+            REF,
+        )
+        self.assertEqual(obsolete, {D})
+        self.assertEqual(protected, {A})
+        self.assertEqual(nars, {NAR_A})
+        upstream.request.assert_called_once_with(f"/{A}.narinfo", missing_ok=True, text=True)
 
     def test_github_only_prunes_obsolete_magic_keys_on_default_branch(self):
         entries = [

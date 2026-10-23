@@ -86,7 +86,7 @@ def cachix_contents(api, cache):
     return {store_hash(path) for path in entries}
 
 
-def cached_closure(roots, available, narinfo):
+def cached_closure(roots, narinfo):
     """Follow references even through upstream paths to protect cached children."""
     pending = list(roots)
     seen = set()
@@ -105,10 +105,10 @@ def cached_closure(roots, available, narinfo):
         seen.add(value)
         # Cachix can encode the complete References line as one array item.
         pending.extend(store_hash(path) for group in info["references"] for path in group.split())
-    return seen & available, nars
+    return seen, nars
 
 
-def cachix_plan(api, upstream, cache, roots, protected, github_entries):
+def cachix_plan(api, upstream, cache, roots, protected, github_entries, ref):
     available = cachix_contents(api, cache)
     metadata = {}
 
@@ -127,27 +127,26 @@ def cachix_plan(api, upstream, cache, roots, protected, github_entries):
 
     # Include every cached build input/output, not just package runtime roots.
     starts = (protected & available) | {store_hash(root["outPath"]) for root in roots.values()}
-    closure, nars = cached_closure(starts, available, narinfo)
+    closure, nars = cached_closure(starts, narinfo)
     protected = protected | closure
     # A protected store path can be served by cache.nixos.org while only its
     # Magic Nix Cache narinfo/NAR pair remains on GitHub.  Keep that NAR too.
     # Metadata is mandatory: deleting its NAR without knowing the digest would
     # leave the protected narinfo incomplete.
-    def protect_github_nars(paths):
-        for value in {
+    def protect_github_closure(paths):
+        starts = {
             match[1]
             for entry in github_entries
-            if (match := MAGIC_KEY.fullmatch(entry["key"])) and match[1] in paths
-        }:
-            info = narinfo(value)
-            if info is None:
-                raise ValueError(f"Cannot determine NAR hash for protected GitHub cache path: {value}")
-            nar = NAR_HASH.fullmatch(info["narHash"])
-            if not nar:
-                raise ValueError(f"Unexpected NAR hash for protected GitHub cache path: {value}")
-            nars.add(nar[1])
+            if entry["ref"] == ref
+            and (match := MAGIC_KEY.fullmatch(entry["key"]))
+            and match[1] in paths
+        }
+        if starts:
+            closure, closure_nars = cached_closure(starts, narinfo)
+            protected.update(closure)
+            nars.update(closure_nars)
 
-    protect_github_nars(protected)
+    protect_github_closure(protected)
 
     pins = api.request(f"/api/v1/cache/{cache}/pin")
     if not isinstance(pins, list):
@@ -156,12 +155,11 @@ def cachix_plan(api, upstream, cache, roots, protected, github_entries):
     # Preserve the entire cache when those histories cannot be proven safe, but
     # only after current roots and GitHub NAR protection have been validated.
     if pins:
-        protected = protected | available
-        # The expanded set keeps every Cachix narinfo.  Preserve the matching
-        # GitHub NARs as well, or its protected narinfos would become broken.
-        protect_github_nars(protected)
+        protected.update(available)
         print("Cachix GC skipped: existing pins may retain historical closures.", flush=True)
-        return set(), protected, nars
+        # Historical pin revisions are not enumerable. Retain every GitHub NAR
+        # rather than guessing which ones those old Cachix closures require.
+        return set(), protected, None
     return available - protected, protected, nars
 
 
@@ -202,7 +200,7 @@ def run_gc(github, cachix, upstream, repository, branch, revision, cache, system
     roots, protected = current_paths(system)
     github_entries = github_caches(github, repository)
     obsolete, protected, nars = cachix_plan(
-        cachix, upstream, cache, roots, protected, github_entries
+        cachix, upstream, cache, roots, protected, github_entries, f"refs/heads/{branch}"
     )
     entries = github_plan(github_entries, protected, nars, f"refs/heads/{branch}")
     # Finish all reads and validate the complete plan before either deletion API.
