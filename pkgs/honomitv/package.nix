@@ -19,12 +19,12 @@ callPackage ./build.nix (
       ;
     pname = "honomitv";
     generateLogos = true;
-    version = "0.14.1-unstable-2026-10-22";
+    version = "0.14.1-unstable-2026-10-23";
     src = fetchFromGitHub {
       owner = "makeding";
       repo = "HonomiTV";
-      rev = "b0fbc837cf74474dced7e815148b4804a5325b7d";
-      hash = "sha256-xjrA5TYZ6bu5M5+UHKqUP6z8B1MM1ZHLJZkJS57sVSk=";
+      rev = "2eeb619af9ec78defe38f4095f5018f269fb6ad9";
+      hash = "sha256-nypIpWezMNZo8XLcrLlTw9OrE3QY2m1SYk2HxEiHFDM=";
     };
     yarnHash = "sha256-cfTe1kENLpRxNW+NSwg554LnYlUPQ2/EPRhUrrYXUIk=";
     description = "HonomiTV fork of KonomiTV: Kept Organized, Notably Optimized, Modern Interface TV media server";
