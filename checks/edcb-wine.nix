@@ -89,4 +89,19 @@ in
     python ${../scripts/test_edcb_wine.py} ${../modules/edcb-wine/init-runtime.py} "$TMPDIR/edcb-state-tests"
     touch "$out"
   '';
+  edcb-wine-script =
+    pkgs.runCommand "edcb-wine-script"
+      {
+        defaultScript = builtins.unsafeDiscardStringContext enabled.systemd.services.edcb-wine.serviceConfig.ExecStart.text;
+        customScript = builtins.unsafeDiscardStringContext custom.systemd.services.edcb-wine.serviceConfig.ExecStart.text;
+        passAsFile = [
+          "defaultScript"
+          "customScript"
+        ];
+      }
+      ''
+        ${pkgs.bash}/bin/bash -n "$defaultScriptPath"
+        ${pkgs.bash}/bin/bash -n "$customScriptPath"
+        touch "$out"
+      '';
 }

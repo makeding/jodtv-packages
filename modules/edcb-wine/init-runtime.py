@@ -78,7 +78,7 @@ def initialize(template, state, recording, info, host, port):
             for driver, count, priority in (("", 0, 0), ("_T", 2, 1), ("_S", 2, 2)):
                 set_keys(path, f"BonDriver_mirakc{driver}.dll", {"Count": count, "GetEpg": int(count > 0), "EPGCount": int(count > 0), "Priority": priority})
     for path in (target / "BonDriver").glob("BonDriver_mirakc*.ini"):
-        # BonDriver uses a sectionless configuration.
+        # Preserve BonDriver sections and unrelated settings verbatim.
         text, encoding = read_ini(path)
         lines = text.splitlines()
         values = {"SERVER_HOST": f'"{host}"', "SERVER_PORT": str(port)}
