@@ -39,7 +39,7 @@ stdenv.mkDerivation {
     start = text.index("git = find_program('git')")
     end = text.index('# Version.h', start)
     # Archive builds have no Git metadata. The package owns the release version.
-    text = text[:start] + "version_h = configure_file(input: 'Version.h.in', output: 'Version.h', copy: true)\n" + text[end:]
+    text = text[:start] + "version_h = configure_file(input: 'Version.h.in', output: 'Version.h', copy: true)\nadd_project_arguments('-I' + meson.current_build_dir(), language: 'cpp')\n" + text[end:]
     # Keep one dynamically linked copy of font/rendering dependencies in the
     # process rather than embedding a second C++/FFmpeg dependency closure.
     start = text.index("aribcaption_pkg_dep =")

@@ -1,9 +1,10 @@
 --- a/src/aesCtrCipher.h
 +++ b/src/aesCtrCipher.h
-@@ -2,6 +2,9 @@
+@@ -2,6 +2,10 @@
  #include <array>
  #include <vector>
  #include <cstdint>
++#include <cstring>
 +
 +#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 +#define DANTTO4K_HAS_AESNI_INTRINSICS 1
