@@ -49,6 +49,11 @@ stdenv.mkDerivation {
     text = text[:start] + "aribcaption_dep = dependency('libaribcaption', required: true)\n\n" + text[end:]
     text = text.replace("dependency('zlib', required : true, static : true)", "dependency('zlib', required : true)")
     path.write_text(text)
+    # FFmpeg 9 removed the legacy FF_PROFILE_* aliases; keep the pinned
+    # upstream source compatible with current libavcodec headers.
+    source = Path('Amatsukaze/AudioTrackConverter.cpp')
+    source_text = source.read_text()
+    source.write_text(source_text.replace('FF_PROFILE_AAC_LOW', 'AV_PROFILE_AAC_LOW'))
     Path('Version.h.in').write_text('#define AMATSUKAZE_VERSION "${version}"\n#define AMATSUKAZE_PRODUCTVERSION ${
       lib.replaceStrings [ "." ] [ "," ] version
     }\n')
