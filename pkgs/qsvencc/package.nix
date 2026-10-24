@@ -24,13 +24,13 @@
 
 stdenv.mkDerivation rec {
   pname = "qsvencc";
-  version = "8.34";
+  version = "8.35";
 
   src = fetchFromGitHub {
     owner = "rigaya";
     repo = "QSVEnc";
     rev = version;
-    hash = "sha256-XuhHm3/g8G3xLQZV00iCg3XQOfPFxo3zgzHGZT86Iow=";
+    hash = "sha256-+HDXhsrSZasjTBVeGKoorLcHq2E8CVXIBiW66nnFCBY=";
     fetchSubmodules = true;
   };
 
