@@ -163,34 +163,6 @@ def flake_at_revision(revision):
     return f"git+{source}?rev={urllib.parse.quote(revision, safe='')}"
 
 
-def ensure_revision(revision):
-    present = subprocess.run(
-        ["git", "cat-file", "-e", f"{revision}^{{commit}}"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    if present.returncode == 0:
-        return
-    fetch_env = os.environ.copy()
-    token = fetch_env.get("GITHUB_TOKEN")
-    if token:
-        auth_env = {
-            "GIT_CONFIG_COUNT": "1",
-            "GIT_CONFIG_KEY_0": "http.https://github.com/.extraheader",
-            "GIT_CONFIG_VALUE_0": f"AUTHORIZATION: bearer {token}",
-        }
-        fetch_env.update(auth_env)
-        # Nix evaluates the historical flake in a child process after this
-        # fetch. Keep the same GitHub auth available to that evaluation too.
-        os.environ.update(auth_env)
-    subprocess.run(
-        ["git", "fetch", "--no-tags", "--depth=1", "origin", revision],
-        check=True,
-        env=fetch_env,
-    )
-
-
 def root_values(roots):
     return roots.values() if isinstance(roots, dict) else roots
 
@@ -314,8 +286,6 @@ def run_gc(github, cachix, upstream, repository, branch, revision, cache, system
     protected = set()
     for build_revision in revisions:
         flake = "." if build_revision == revision else flake_at_revision(build_revision)
-        if build_revision != revision:
-            ensure_revision(build_revision)
         build_roots, build_paths = current_paths(system, flake)
         roots.update({f"{build_revision}:{name}": root for name, root in build_roots.items()})
         protected.update(build_paths)

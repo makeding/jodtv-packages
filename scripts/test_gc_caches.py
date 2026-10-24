@@ -63,7 +63,6 @@ class CacheRetentionTests(unittest.TestCase):
         with patch.object(gc, "at_revision", return_value=True), \
              patch.object(gc, "cachix_contents", return_value={A, B}), \
              patch.object(gc, "build_revisions", return_value=["current", "previous"]), \
-             patch.object(gc, "ensure_revision"), \
              patch.object(
                  gc,
                  "current_paths",
@@ -78,17 +77,6 @@ class CacheRetentionTests(unittest.TestCase):
             gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "current", "jodtv", "x86_64-linux", False)
 
         self.assertEqual(set(plan.call_args.args[3]), {"current:pkg", "previous:pkg"})
-
-    def test_ensure_revision_fetches_only_missing_revision(self):
-        present = Mock(return_value=Mock(returncode=1))
-        fetched = Mock()
-        with patch.object(gc.subprocess, "run", side_effect=[present.return_value, fetched]) as run:
-            with patch.dict(gc.os.environ, {"GITHUB_TOKEN": "token"}, clear=True):
-                gc.ensure_revision("previous")
-                self.assertEqual(gc.os.environ["GIT_CONFIG_VALUE_0"], "AUTHORIZATION: bearer token")
-
-        self.assertEqual(run.call_args.args[0], ["git", "fetch", "--no-tags", "--depth=1", "origin", "previous"])
-        self.assertEqual(run.call_args.kwargs["env"]["GIT_CONFIG_VALUE_0"], "AUTHORIZATION: bearer token")
 
     def test_main_never_uses_upload_token_for_gc(self):
         with patch.dict(
