@@ -1,7 +1,11 @@
 { callPackage, inputs }:
+let
+  amatsukaze = callPackage ./amatsukaze/package.nix { };
+in
 {
   a865r-firmware = callPackage ./a865r-firmware/package.nix { };
-  amatsukaze = callPackage ./amatsukaze/package.nix { };
+  inherit amatsukaze;
+  amatsukaze-native = amatsukaze.sourceBuild;
   casproxyserver = callPackage ./casproxyserver/package.nix { };
   dantto4k = callPackage ./dantto4k/package.nix { };
   edcb-wine = callPackage ./edcb-wine/package.nix { };

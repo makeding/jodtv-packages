@@ -56,6 +56,26 @@ stdenv.mkDerivation {
   postInstall = ''
     # --loadv2 chooses this filename; both paths must use the selected libav.
     ln -s libAmatsukaze.so "$out/lib/libAmatsukaze2.so"
+    # The CLI and logo tool dlopen beside their executable, not from lib/.
+    for library in libAmatsukaze.so libAmatsukaze2.so; do
+      ln -s ../lib/$library "$out/bin/$library"
+    done
+  '';
+  doInstallCheck = true;
+  installCheckPhase = ''
+    runHook preInstallCheck
+    # No input prints usage and exits 1. This still loads the selected library
+    # and resolves its exported CLI symbol through the actual installed path.
+    for mode in default v2; do
+      args=()
+      if [ "$mode" = v2 ]; then args+=(--loadv2); fi
+      status=0
+      "$out/bin/AmatsukazeCLI" "''${args[@]}" > "$mode.log" 2>&1 || status=$?
+      cat "$mode.log"
+      test "$status" = 1
+      grep -q -- '--input' "$mode.log"
+    done
+    runHook postInstallCheck
   '';
   passthru = {
     inherit ffmpeg;
@@ -65,7 +85,11 @@ stdenv.mkDerivation {
     description = "Amatsukaze native engines rebuilt against the selected FFmpeg";
     homepage = "https://github.com/rigaya/Amatsukaze";
     license = lib.licenses.gpl2Plus;
-    platforms = [ "x86_64-linux" ];
+    platforms = [
+      "x86_64-linux"
+      "aarch64-linux"
+    ];
+    mainProgram = "AmatsukazeCLI";
     maintainers = [ lib.maintainers.huggy ];
   };
 }

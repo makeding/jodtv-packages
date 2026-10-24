@@ -69,6 +69,12 @@ in
     assert self.packages.x86_64-linux.amatsukaze.meta.mainProgram == "amatsukaze";
     assert self.packages.x86_64-linux.nvencc.meta.mainProgram == "nvencc";
     assert !(self.packages.aarch64-linux ? amatsukaze);
+    assert self.packages.aarch64-linux ? amatsukaze-native;
+    assert self.packages.aarch64-linux.amatsukaze-native.doCheck;
+    assert self.packages.aarch64-linux.amatsukaze-native.doInstallCheck;
+    assert
+      self.packages.aarch64-linux.amatsukaze-native.drvPath
+      == self.legacyPackages.aarch64-linux.amatsukaze.sourceBuild.drvPath;
     assert !(self.packages.aarch64-linux ? nvencc);
     assert !(self.packages.aarch64-darwin ? amatsukaze);
     assert !(self.packages.aarch64-darwin ? nvencc);

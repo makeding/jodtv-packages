@@ -58,7 +58,9 @@ stdenv.mkDerivation rec {
     substituteInPlace Makefile \
       --replace-fail \
         "CXXFLAGS = -std=c++20 -Wall -maes -msse4.1" \
-        "CXXFLAGS = -std=c++20 -Wall -include cstdint ${lib.optionalString (stdenv.hostPlatform.isx86 or false) "-maes -msse4.1"}"
+        "CXXFLAGS = -std=c++20 -Wall -include cstdint ${
+          lib.optionalString (stdenv.hostPlatform.isx86 or false) "-maes -msse4.1"
+        }"
   '';
 
   enableParallelBuilding = true;
