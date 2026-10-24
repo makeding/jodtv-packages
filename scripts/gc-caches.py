@@ -175,11 +175,15 @@ def ensure_revision(revision):
     fetch_env = os.environ.copy()
     token = fetch_env.get("GITHUB_TOKEN")
     if token:
-        fetch_env.update(
-            GIT_CONFIG_COUNT="1",
-            GIT_CONFIG_KEY_0="http.https://github.com/.extraheader",
-            GIT_CONFIG_VALUE_0=f"AUTHORIZATION: bearer {token}",
-        )
+        auth_env = {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "http.https://github.com/.extraheader",
+            "GIT_CONFIG_VALUE_0": f"AUTHORIZATION: bearer {token}",
+        }
+        fetch_env.update(auth_env)
+        # Nix evaluates the historical flake in a child process after this
+        # fetch. Keep the same GitHub auth available to that evaluation too.
+        os.environ.update(auth_env)
     subprocess.run(
         ["git", "fetch", "--no-tags", "--depth=1", "origin", revision],
         check=True,

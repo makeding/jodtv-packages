@@ -85,6 +85,7 @@ class CacheRetentionTests(unittest.TestCase):
         with patch.object(gc.subprocess, "run", side_effect=[present.return_value, fetched]) as run:
             with patch.dict(gc.os.environ, {"GITHUB_TOKEN": "token"}, clear=True):
                 gc.ensure_revision("previous")
+                self.assertEqual(gc.os.environ["GIT_CONFIG_VALUE_0"], "AUTHORIZATION: bearer token")
 
         self.assertEqual(run.call_args.args[0], ["git", "fetch", "--no-tags", "--depth=1", "origin", "previous"])
         self.assertEqual(run.call_args.kwargs["env"]["GIT_CONFIG_VALUE_0"], "AUTHORIZATION: bearer token")
