@@ -10,10 +10,22 @@
   libjpeg_turbo,
   libaribcaption,
   fontconfig,
+  noto-fonts-cjk-sans,
+  writeText,
   zlib,
   version,
   src,
 }:
+let
+  testFontConfig = writeText "amatsukaze-native-fonts.conf" ''
+    <?xml version="1.0"?>
+    <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+    <fontconfig>
+      <include ignore_missing="yes">${fontconfig.out}/etc/fonts/fonts.conf</include>
+      <dir>${noto-fonts-cjk-sans}/share/fonts</dir>
+    </fontconfig>
+  '';
+in
 stdenv.mkDerivation {
   pname = "amatsukaze-native";
   inherit version src;
@@ -60,6 +72,11 @@ stdenv.mkDerivation {
     PY
   '';
   doCheck = true;
+  preCheck = ''
+    export FONTCONFIG_FILE=${testFontConfig}
+    export XDG_CACHE_HOME="$TMPDIR/fontconfig-cache"
+    mkdir -p "$XDG_CACHE_HOME"
+  '';
   postInstall = ''
     # --loadv2 chooses this filename; both paths must use the selected libav.
     ln -s libAmatsukaze.so "$out/lib/libAmatsukaze2.so"
