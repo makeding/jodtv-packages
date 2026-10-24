@@ -8,7 +8,7 @@ also checks that the built revision is still the default branch's head.
 import argparse
 import json
 import os
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 import re
 import subprocess
 import urllib.error
@@ -53,9 +53,10 @@ class API:
                 raise RuntimeError(
                     f"{method} {self.base}{path}: HTTP {error.code}. "
                     "Cachix rejected GC authentication/authorization. Set the repository "
-                    "Actions secret CACHIX_GC_AUTH_TOKEN to a valid personal API token "
-                    "with access to this cache's listing and deletion operations. "
-                    "A working upload token does not prove management API access. "
+                    "Actions secret CACHIX_GC_AUTH_TOKEN to a Cachix personal API token "
+                    "from https://app.cachix.org/personal-auth-tokens, with access to "
+                    "this cache's listing and deletion operations. The per-cache "
+                    "read/write token from the cache Settings page is not sufficient. "
                     "Check token validity and the account's cache permissions."
                 ) from None
             raise RuntimeError(f"{method} {self.base}{path}: HTTP {error.code}") from None
@@ -68,9 +69,9 @@ def nix_json(*args):
     return json.loads(subprocess.check_output(["nix", *args], text=True))
 
 
-def current_paths(system):
+def current_paths(system, flake="."):
     roots = nix_json(
-        "eval", "--impure", "--json", f".#packages.{system}", "--apply",
+        "eval", "--impure", "--json", f"{flake}#packages.{system}", "--apply",
         "ps: builtins.mapAttrs (_: p: { drvPath = p.drvPath; outputPath = p.outPath; }) ps",
     )
     if not roots:
@@ -109,6 +110,85 @@ def cachix_contents(api, cache):
     if not isinstance(entries, list):
         raise ValueError("Unexpected Cachix contents response")
     return {store_hash(path) for path in entries}
+
+
+def build_revisions(api, repository, branch, current, count=2):
+    """Return the current and most recent completed package-build revisions."""
+    revisions = []
+    seen = set()
+    page = 1
+    while len(revisions) < count:
+        branch_arg = urllib.parse.quote(branch, safe="")
+        data = api.request(
+            f"/repos/{repository}/actions/workflows/build-packages.yml/runs"
+            f"?branch={branch_arg}&status=completed&per_page=100&page={page}"
+        )
+        runs = data.get("workflow_runs", [])
+        for run in runs:
+            if run.get("conclusion") != "success":
+                jobs = api.request(
+                    f"/repos/{repository}/actions/runs/{run['id']}/jobs?per_page=100"
+                ).get("jobs", [])
+                prepare_ok = any(
+                    job.get("name") == "Build and cache common dependencies"
+                    and job.get("conclusion") == "success"
+                    for job in jobs
+                )
+                non_gc_jobs = [
+                    job for job in jobs if job.get("name") != "Prune obsolete CI caches"
+                ]
+                if not prepare_ok or not all(
+                    job.get("conclusion") in ("success", "skipped") for job in non_gc_jobs
+                ):
+                    continue
+            value = run.get("head_sha")
+            if value and value not in seen:
+                seen.add(value)
+                revisions.append(value)
+                if len(revisions) == count:
+                    break
+        if len(runs) < 100:
+            break
+        page += 1
+    if current not in seen:
+        revisions.insert(0, current)
+    else:
+        revisions.remove(current)
+        revisions.insert(0, current)
+    return revisions[:count]
+
+
+def flake_at_revision(revision):
+    source = Path.cwd().as_uri()
+    return f"git+{source}?rev={urllib.parse.quote(revision, safe='')}"
+
+
+def ensure_revision(revision):
+    present = subprocess.run(
+        ["git", "cat-file", "-e", f"{revision}^{{commit}}"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if present.returncode == 0:
+        return
+    fetch_env = os.environ.copy()
+    token = fetch_env.get("GITHUB_TOKEN")
+    if token:
+        fetch_env.update(
+            GIT_CONFIG_COUNT="1",
+            GIT_CONFIG_KEY_0="http.https://github.com/.extraheader",
+            GIT_CONFIG_VALUE_0=f"AUTHORIZATION: bearer {token}",
+        )
+    subprocess.run(
+        ["git", "fetch", "--no-tags", "--depth=1", "origin", revision],
+        check=True,
+        env=fetch_env,
+    )
+
+
+def root_values(roots):
+    return roots.values() if isinstance(roots, dict) else roots
 
 
 def cached_closure(roots, narinfo):
@@ -152,7 +232,7 @@ def cachix_plan(api, upstream, cache, roots, protected, github_entries, ref, ava
         return metadata[value]
 
     # Include every cached build input/output, not just package runtime roots.
-    starts = (protected & available) | {store_hash(root["outputPath"]) for root in roots.values()}
+    starts = (protected & available) | {store_hash(root["outputPath"]) for root in root_values(roots)}
     closure, nars = cached_closure(starts, narinfo)
     protected = protected | closure
     # A protected store path can be served by cache.nixos.org while only its
@@ -225,7 +305,17 @@ def run_gc(github, cachix, upstream, repository, branch, revision, cache, system
         return
     # Fail at the actual management API before expensive Nix evaluation.
     available = cachix_contents(cachix, cache)
-    roots, protected = current_paths(system)
+    revisions = build_revisions(github, repository, branch, revision)
+    roots = {}
+    protected = set()
+    for build_revision in revisions:
+        flake = "." if build_revision == revision else flake_at_revision(build_revision)
+        if build_revision != revision:
+            ensure_revision(build_revision)
+        build_roots, build_paths = current_paths(system, flake)
+        roots.update({f"{build_revision}:{name}": root for name, root in build_roots.items()})
+        protected.update(build_paths)
+    print(f"Retaining build revisions: {', '.join(revisions)}", flush=True)
     github_entries = github_caches(github, repository)
     obsolete, protected, nars = cachix_plan(
         cachix, upstream, cache, roots, protected, github_entries, f"refs/heads/{branch}", available
@@ -262,7 +352,7 @@ def main():
     github = API("https://api.github.com", os.environ.get("GITHUB_TOKEN"))
     cachix = API(
         "https://app.cachix.org",
-        os.environ.get("CACHIX_GC_AUTH_TOKEN") or os.environ.get("CACHIX_AUTH_TOKEN"),
+        os.environ.get("CACHIX_GC_AUTH_TOKEN"),
     )
     run_gc(github, cachix, API("https://cache.nixos.org"), args.repository,
            args.branch, args.revision, args.cache, args.system, args.apply)

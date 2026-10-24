@@ -22,6 +22,87 @@ def entry(number, key, ref=REF):
 
 
 class CacheRetentionTests(unittest.TestCase):
+    def test_build_revisions_keeps_current_and_previous_successful_build(self):
+        api = Mock()
+        api.request.return_value = {
+            "workflow_runs": [
+                {"head_sha": "previous", "conclusion": "success"},
+                {"head_sha": "older", "conclusion": "success"},
+            ]
+        }
+
+        self.assertEqual(
+            gc.build_revisions(api, "owner/repo", "master", "current"),
+            ["current", "previous"],
+        )
+
+    def test_build_revisions_accepts_build_success_when_gc_failed(self):
+        api = Mock()
+        api.request.side_effect = [
+            {
+                "workflow_runs": [
+                    {"id": 123, "head_sha": "previous", "conclusion": "failure"},
+                ]
+            },
+            {
+                "jobs": [
+                    {"name": "Build and cache common dependencies", "conclusion": "success"},
+                    {"name": "Build package", "conclusion": "success"},
+                    {"name": "Prune obsolete CI caches", "conclusion": "failure"},
+                ]
+            },
+        ]
+
+        self.assertEqual(
+            gc.build_revisions(api, "owner/repo", "master", "current"),
+            ["current", "previous"],
+        )
+
+    def test_gc_protects_roots_from_both_retained_builds(self):
+        github, cachix = Mock(), Mock()
+        with patch.object(gc, "at_revision", return_value=True), \
+             patch.object(gc, "cachix_contents", return_value={A, B}), \
+             patch.object(gc, "build_revisions", return_value=["current", "previous"]), \
+             patch.object(gc, "ensure_revision"), \
+             patch.object(
+                 gc,
+                 "current_paths",
+                 side_effect=[
+                     ({"pkg": {"outputPath": f"{A}-current"}}, {A}),
+                     ({"pkg": {"outputPath": f"{B}-previous"}}, {B}),
+                 ],
+             ), \
+             patch.object(gc, "github_caches", return_value=[]), \
+             patch.object(gc, "cachix_plan", return_value=(set(), {A, B}, set())) as plan, \
+             patch("builtins.print"):
+            gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "current", "jodtv", "x86_64-linux", False)
+
+        self.assertEqual(set(plan.call_args.args[3]), {"current:pkg", "previous:pkg"})
+
+    def test_ensure_revision_fetches_only_missing_revision(self):
+        present = Mock(return_value=Mock(returncode=1))
+        fetched = Mock()
+        with patch.object(gc.subprocess, "run", side_effect=[present.return_value, fetched]) as run:
+            with patch.dict(gc.os.environ, {"GITHUB_TOKEN": "token"}, clear=True):
+                gc.ensure_revision("previous")
+
+        self.assertEqual(run.call_args.args[0], ["git", "fetch", "--no-tags", "--depth=1", "origin", "previous"])
+        self.assertEqual(run.call_args.kwargs["env"]["GIT_CONFIG_VALUE_0"], "AUTHORIZATION: bearer token")
+
+    def test_main_never_uses_upload_token_for_gc(self):
+        with patch.dict(
+            gc.os.environ,
+            {
+                "GITHUB_REPOSITORY": "owner/repo",
+                "CACHIX_AUTH_TOKEN": "upload-token",
+            },
+            clear=True,
+        ), patch("sys.argv", ["gc-caches.py", "--branch", "master", "--revision", "revision"]), \
+             patch.object(gc, "run_gc") as run_gc:
+            gc.main()
+
+        self.assertIsNone(run_gc.call_args.args[1].token)
+
     def test_cachix_auth_error_names_secret_without_exposing_token(self):
         for status in (401, 403):
             with self.subTest(status=status), patch.object(
@@ -256,6 +337,7 @@ class CacheRetentionTests(unittest.TestCase):
             plan = ({B}, {A}, {NAR_A})
         with patch.object(gc, "at_revision", side_effect=revisions), \
              patch.object(gc, "cachix_contents", return_value={A, B}), \
+             patch.object(gc, "build_revisions", return_value=["revision"]), \
              patch.object(gc, "current_paths", return_value=({"pkg": {"outputPath": f"{A}-pkg"}}, {A})), \
              patch.object(gc, "cachix_plan", return_value=plan), \
              patch.object(gc, "github_caches", return_value=[entry(1, B + ".narinfo-aB12")]), \
@@ -284,6 +366,7 @@ class CacheRetentionTests(unittest.TestCase):
         github, cachix = Mock(), Mock()
         with patch.object(gc, "at_revision", return_value=True), \
              patch.object(gc, "cachix_contents", return_value=set()), \
+             patch.object(gc, "build_revisions", return_value=["revision"]), \
              patch.object(gc, "current_paths", return_value=({}, set())), \
              patch.object(gc, "github_caches", return_value=[]), \
              patch.object(gc, "cachix_plan", side_effect=ValueError("missing required output")):

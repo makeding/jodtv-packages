@@ -158,9 +158,13 @@ jobs:
       - name: Prune caches after the complete build and uploads succeeded
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_GC_AUTH_TOKEN || secrets.CACHIX_AUTH_TOKEN }}
+          CACHIX_GC_AUTH_TOKEN: ${{ secrets.CACHIX_GC_AUTH_TOKEN }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           BUILT_REVISION: ${{ needs.prepare.outputs.revision }}
-        run: >-
-          python3 -B scripts/gc-caches.py --apply
-          --branch "$DEFAULT_BRANCH" --revision "$BUILT_REVISION"
+        run: |
+          if [ -z "$CACHIX_GC_AUTH_TOKEN" ]; then
+            echo '::error::Add CACHIX_GC_AUTH_TOKEN as a Cachix personal API token from https://app.cachix.org/personal-auth-tokens; the per-cache read/write token is not sufficient.'
+            exit 1
+          fi
+          python3 -B scripts/gc-caches.py --apply \
+            --branch "$DEFAULT_BRANCH" --revision "$BUILT_REVISION"
