@@ -46,7 +46,7 @@ stdenv.mkDerivation {
     # process rather than embedding a second C++/FFmpeg dependency closure.
     start = text.index("aribcaption_pkg_dep =")
     end = text.index('# glibc', start)
-    text = text[:start] + "aribcaption_dep = dependency('libaribcaption', required: true)\n\n" + text[end:]
+    text = text[:start] + "aribcaption_dep = declare_dependency(dependencies: [\n  dependency('libaribcaption', required: true),\n  dependency('fontconfig', required: true),\n])\n\n" + text[end:]
     text = text.replace("dependency('zlib', required : true, static : true)", "dependency('zlib', required : true)")
     path.write_text(text)
     # FFmpeg 9 removed the legacy FF_PROFILE_* aliases; keep the pinned
