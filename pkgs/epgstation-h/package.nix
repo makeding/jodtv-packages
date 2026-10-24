@@ -12,12 +12,12 @@ callPackage ./build.nix (
     "stdenv"
   ]
   // {
-    version = "3.0.0-beta3-unstable-2026-10-23";
+    version = "3.0.0-beta3-unstable-2026-10-24";
     src = fetchFromGitHub {
       owner = "makeding";
       repo = "EPGStation";
-      rev = "5396bffeae34a4b405449096c88fca63296cd5f9";
-      hash = "sha256-q8O7f3NsaX43UUynB3Fbg0hMIaP1+jdUAWKY55cyjzk=";
+      rev = "cce7d1972eb6d208fc46f944cc0e313d9aae6526";
+      hash = "sha256-EpTRRSd2EAhlJaD9UqiRzGkiZD5xriXf6mvfcT7wH2c=";
     };
     npmDepsHash = "sha256-zKlf7/n8DQdG+ChpCcArPQLNfN87L4OmuXpnCPUgenI=";
     clientNpmDepsHash = "sha256-Mt+RNGdFVXHmFzza+g7rbCC0B59sv5kAebsEKddReIo=";
