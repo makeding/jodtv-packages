@@ -48,13 +48,25 @@ PT3、上流版 PX4、Siano、TBS6812、A865R のドライバーを含みます�
 ビルドしたバイナリを公開パッケージとして提供することはありません。
 
 `packages.x86_64-linux` はすべてのパッケージを公開します。`aarch64-linux` では
-ARM 向けのパッケージングを検証するまで、HonomiTV/KonomiTV と Intel 向け
-エンコード関連パッケージを除外しています。`aarch64-darwin` では Hiraku、libaribb61、libaribtlv、
+以下のアーキテクチャ固有の 5 パッケージを除外しています。`aarch64-darwin` では Hiraku、libaribb61、libaribtlv、
 PSI/SI ツール、mmt2ts、tsreadex、tsreplace、FFmpeg パッチセットを公開します。
 ソースの取得を伴うパッケージが無関係なツールの評価まで要求しないよう、公開する一覧を
 明示しています。出力が存在することは、そのプラットフォームでビルド済みであることを
 意味しません。HonomiTV と FFmpeg パッチセットの評価にはソースが必要です。
 `--option allow-import-from-derivation false` を指定すると、その要求を確認できます。
+
+CI は Linux の両出力を同一リビジョンで、ネイティブ runner
+（`ubuntu-24.04` / `ubuntu-24.04-arm`）上でビルドします。各アーキテクチャで
+共有 derivation のビルドとアップロードを完了してから個別パッケージをビルドします。
+手動指定は各出力との共通部分を対象とし、未知の名前はエラーにします。
+キャッシュ GC は両方が成功した後に実行し、現在と前回の保持対象リビジョンについて
+両アーキテクチャの依存関係と出力を保護します。
+
+ARM Linux の HonomiTV/KonomiTV は FFmpeg を使い、同梱 QSVEncC/NVEncC は対象外です。
+除外する 5 パッケージは `amatsukaze`（x64 バンドル・エンジン）、`edcb-wine`
+（Windows x64/Wine）、`intel-media-sdk-h` と `qsvencc`（Intel 向け）、
+`nvencc`（amd64 バンドル・x86 CUDA 設定）です。
+CI のビルド成功はチューナー、カードリーダー、GPU の実機動作を保証しません。
 
 ## MMT/TLV 変換ツール
 

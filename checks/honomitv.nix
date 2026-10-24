@@ -4,6 +4,14 @@ let
   first = pkgs.writeText "honomitv-initial.yaml" "encoder: FFmpeg\n";
   next = pkgs.writeText "honomitv-next.yaml" "encoder: QSVEncC\n";
 in
+assert
+  pkgs.stdenv.hostPlatform.system != "aarch64-linux"
+  || (
+    pkgs.honomitv.qsvenccForHost == null
+    && pkgs.honomitv.nvenccForHost == null
+    && pkgs.konomitv.qsvenccForHost == null
+    && pkgs.konomitv.nvenccForHost == null
+  );
 {
   # Build the locked source distribution to catch missing legacy build backends.
   honomitv-pymediainfo = pkgs.runCommand "honomitv-pymediainfo" { } ''

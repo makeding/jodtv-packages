@@ -130,7 +130,7 @@ def build_revisions(api, repository, branch, current, count=2):
                     f"/repos/{repository}/actions/runs/{run['id']}/jobs?per_page=100"
                 ).get("jobs", [])
                 prepare_ok = any(
-                    job.get("name") == "Build and cache common dependencies"
+                    job.get("name", "").split(" / ")[-1] == "Build and cache common dependencies"
                     and job.get("conclusion") == "success"
                     for job in jobs
                 )
@@ -275,7 +275,7 @@ def at_revision(api, repository, branch, revision):
     return api.request(f"/repos/{repository}/git/ref/heads/{ref}")["object"]["sha"] == revision
 
 
-def run_gc(github, cachix, upstream, repository, branch, revision, cache, system, apply):
+def run_gc(github, cachix, upstream, repository, branch, revision, cache, systems, apply):
     if not at_revision(github, repository, branch, revision):
         print("GC skipped: a newer default-branch revision has not passed this build.", flush=True)
         return
@@ -286,9 +286,10 @@ def run_gc(github, cachix, upstream, repository, branch, revision, cache, system
     protected = set()
     for build_revision in revisions:
         flake = "." if build_revision == revision else flake_at_revision(build_revision)
-        build_roots, build_paths = current_paths(system, flake)
-        roots.update({f"{build_revision}:{name}": root for name, root in build_roots.items()})
-        protected.update(build_paths)
+        for system in systems:
+            build_roots, build_paths = current_paths(system, flake)
+            roots.update({f"{build_revision}:{system}:{name}": root for name, root in build_roots.items()})
+            protected.update(build_paths)
     print(f"Retaining build revisions: {', '.join(revisions)}", flush=True)
     github_entries = github_caches(github, repository)
     obsolete, protected, nars = cachix_plan(
@@ -316,7 +317,7 @@ def main():
     parser.add_argument("--branch", required=True)
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY"), required=not os.environ.get("GITHUB_REPOSITORY"))
     parser.add_argument("--cache", default="jodtv")
-    parser.add_argument("--system", default="x86_64-linux")
+    parser.add_argument("--system", action="append", dest="systems", help="Repeat for every architecture in the shared cache")
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
     if not re.fullmatch(r"[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+", args.repository):
@@ -329,7 +330,7 @@ def main():
         os.environ.get("CACHIX_GC_AUTH_TOKEN"),
     )
     run_gc(github, cachix, API("https://cache.nixos.org"), args.repository,
-           args.branch, args.revision, args.cache, args.system, args.apply)
+           args.branch, args.revision, args.cache, args.systems or ["x86_64-linux", "aarch64-linux"], args.apply)
 
 
 if __name__ == "__main__":

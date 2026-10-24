@@ -74,9 +74,27 @@ class CacheRetentionTests(unittest.TestCase):
              patch.object(gc, "github_caches", return_value=[]), \
              patch.object(gc, "cachix_plan", return_value=(set(), {A, B}, set())) as plan, \
              patch("builtins.print"):
-            gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "current", "jodtv", "x86_64-linux", False)
+            gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "current", "jodtv", ["x86_64-linux"], False)
 
-        self.assertEqual(set(plan.call_args.args[3]), {"current:pkg", "previous:pkg"})
+        self.assertEqual(set(plan.call_args.args[3]), {"current:x86_64-linux:pkg", "previous:x86_64-linux:pkg"})
+
+    def test_gc_unions_architectures_before_planning_deletions(self):
+        github, cachix = Mock(), Mock()
+        with patch.object(gc, "at_revision", return_value=True), \
+             patch.object(gc, "cachix_contents", return_value={A, B}), \
+             patch.object(gc, "build_revisions", return_value=["current"]), \
+             patch.object(gc, "current_paths", side_effect=[
+                 ({"pkg": {"outputPath": f"{A}-x86"}}, {A}),
+                 ({"pkg": {"outputPath": f"{B}-arm"}}, {B}),
+             ]) as paths, \
+             patch.object(gc, "github_caches", return_value=[]), \
+             patch.object(gc, "cachix_plan", return_value=(set(), {A, B}, set())) as plan, \
+             patch("builtins.print"):
+            gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "current", "jodtv",
+                      ["x86_64-linux", "aarch64-linux"], False)
+        self.assertEqual([call.args[0] for call in paths.call_args_list], ["x86_64-linux", "aarch64-linux"])
+        self.assertEqual(set(plan.call_args.args[3]), {"current:x86_64-linux:pkg", "current:aarch64-linux:pkg"})
+        self.assertEqual(plan.call_args.args[4], {A, B})
 
     def test_main_never_uses_upload_token_for_gc(self):
         with patch.dict(
@@ -109,7 +127,7 @@ class CacheRetentionTests(unittest.TestCase):
         with patch.object(gc, "at_revision", return_value=True), \
              patch.object(gc, "current_paths") as paths:
             with self.assertRaisesRegex(RuntimeError, "HTTP 401"):
-                gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "revision", "jodtv", "x86_64-linux", True)
+                gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "revision", "jodtv", ["x86_64-linux"], True)
         paths.assert_not_called()
         github.request.assert_not_called()
         cachix.request.assert_called_once_with("/api/v1/cache/jodtv/contents")
@@ -331,7 +349,7 @@ class CacheRetentionTests(unittest.TestCase):
              patch.object(gc, "cachix_plan", return_value=plan), \
              patch.object(gc, "github_caches", return_value=[entry(1, B + ".narinfo-aB12")]), \
              patch("builtins.print"):
-            gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "revision", "jodtv", "x86_64-linux", apply)
+            gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "revision", "jodtv", ["x86_64-linux"], apply)
         return github, cachix
 
     def test_dry_run_never_deletes(self):
@@ -360,7 +378,7 @@ class CacheRetentionTests(unittest.TestCase):
              patch.object(gc, "github_caches", return_value=[]), \
              patch.object(gc, "cachix_plan", side_effect=ValueError("missing required output")):
             with self.assertRaisesRegex(ValueError, "missing required output"):
-                gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "revision", "jodtv", "x86_64-linux", True)
+                gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "revision", "jodtv", ["x86_64-linux"], True)
         github.request.assert_not_called()
         cachix.request.assert_not_called()
 

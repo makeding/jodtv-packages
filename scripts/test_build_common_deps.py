@@ -13,6 +13,22 @@ def root(drv, outputs=("out",)):
 
 
 class DependencyPlanTests(unittest.TestCase):
+    def test_platform_selection_skips_only_known_unsupported_packages(self):
+        self.assertEqual(common.select_packages(["edcb", "hiraku"], ["hiraku"], ["edcb", "hiraku"]), ["hiraku"])
+        self.assertEqual(common.select_packages(["edcb"], ["hiraku"], ["edcb", "hiraku"]), [])
+        with self.assertRaisesRegex(ValueError, "Unknown packages"):
+            common.select_packages(["typo"], ["hiraku"], ["edcb", "hiraku"])
+
+    def test_empty_platform_selection_does_not_query_or_build_derivations(self):
+        with patch("sys.argv", ["build-common-deps.py", "--build", "--filter-supported", "--system", "aarch64-linux", "--packages", "edcb"]), \
+             patch.object(common, "nix_json", side_effect=[["hiraku"], ["edcb", "hiraku"]]) as query, \
+             patch.object(common.subprocess, "run") as run, \
+             patch.object(common, "emit_packages") as emit, patch("builtins.print"):
+            common.main()
+        self.assertEqual(query.call_count, 2)
+        run.assert_not_called()
+        emit.assert_called_once_with([])
+
     def test_repository_dependencies_build_before_consumers(self):
         graph = {
             "epgstation": {"tsreplace": {"out"}},

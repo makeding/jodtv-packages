@@ -71,8 +71,6 @@
           x86Only = [
             "amatsukaze"
             "edcb-wine"
-            "honomitv"
-            "konomitv"
             "intel-media-sdk-h"
             "qsvencc"
             "nvencc"

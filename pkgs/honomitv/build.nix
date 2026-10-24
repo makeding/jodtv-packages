@@ -33,8 +33,10 @@
 let
   python = pythonInterpreter;
 
-  qsvenccForHost = if stdenv.hostPlatform.isLinux then qsvencc else null;
-  nvenccForHost = if stdenv.hostPlatform.isLinux then nvencc else null;
+  qsvenccForHost =
+    if stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isx86_64 then qsvencc else null;
+  nvenccForHost =
+    if stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isx86_64 then nvencc else null;
   uncheckedTools = [
     "Akebi"
     "VCEEncC"

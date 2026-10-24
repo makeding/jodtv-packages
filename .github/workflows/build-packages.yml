@@ -13,6 +13,7 @@ on:
       - 'scripts/gc-caches.py'
       - 'scripts/test_gc_caches.py'
       - '.github/workflows/build-packages.yml'
+      - '.github/workflows/build-system.yml'
   # GITHUB_TOKEN pushes from the updater do not trigger push workflows.
   workflow_run:
     workflows: ['Bump packages', 'Bump nixpkgs']
@@ -35,103 +36,49 @@ env:
   NIXPKGS_ALLOW_UNFREE: '1'
 
 jobs:
-  prepare:
-    name: Build and cache common dependencies
+  revision:
+    name: Pin build revision
     if: >-
       github.ref_name == github.event.repository.default_branch &&
       (github.event_name != 'workflow_run' ||
        (github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.head_branch == github.event.repository.default_branch))
     runs-on: ubuntu-24.04
-    timeout-minutes: 360
     outputs:
-      packages: ${{ steps.packages.outputs.packages }}
-      revision: ${{ steps.packages.outputs.revision }}
+      revision: ${{ steps.revision.outputs.revision }}
     steps:
-      - name: Check Cachix credentials
-        env:
-          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
-        run: |
-          if [ -z "$CACHIX_AUTH_TOKEN" ]; then
-            echo '::error::Add the repository Actions secret CACHIX_AUTH_TOKEN with write access to the jodtv cache.'
-            exit 1
-          fi
-
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          # The updater's original head SHA predates its new bump commit.
           ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.sha }}
           persist-credentials: false
-
-      - uses: cachix/install-nix-action@d9186cbdca7adedf113a159fa91f725a27866771 # v31
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            max-jobs = 2
-            cores = 2
-
-      - name: Read and populate the jodtv binary cache
-        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          name: jodtv
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-
-      - name: Check dependency planning
-        run: python3 -B -m unittest discover -s scripts -p test_build_common_deps.py
-
-      - name: Build common dependencies and pin the build revision
-        id: packages
-        env:
-          REQUESTED_PACKAGES: ${{ inputs.packages }}
-        run: |
-          python3 -B scripts/build-common-deps.py --build --packages "$REQUESTED_PACKAGES"
-          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - id: revision
+        run: echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   build:
-    name: Build ${{ matrix.package }} (x86_64-linux)
-    # needs includes the prepare job's post steps, so Cachix has flushed uploads.
-    needs: prepare
-    if: needs.prepare.outputs.packages != '[]'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 360
+    needs: revision
     strategy:
       fail-fast: false
-      max-parallel: 3
       matrix:
-        package: ${{ fromJSON(needs.prepare.outputs.packages) }}
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          ref: ${{ needs.prepare.outputs.revision }}
-          persist-credentials: false
-
-      - uses: cachix/install-nix-action@d9186cbdca7adedf113a159fa91f725a27866771 # v31
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            max-jobs = 1
-            cores = 2
-
-      - name: Read and populate the jodtv binary cache
-        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          name: jodtv
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-
-      - name: Build package
-        env:
-          PACKAGE: ${{ matrix.package }}
-        run: nix build --impure --no-link --print-build-logs ".#packages.x86_64-linux.${PACKAGE}"
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-24.04
+          - system: aarch64-linux
+            runner: ubuntu-24.04-arm
+    uses: ./.github/workflows/build-system.yml
+    with:
+      system: ${{ matrix.system }}
+      runner: ${{ matrix.runner }}
+      revision: ${{ needs.revision.outputs.revision }}
+      packages: ${{ inputs.packages || '' }}
+    secrets:
+      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
   gc:
     name: Prune obsolete CI caches
-    needs: [prepare, build]
-    # An empty matrix is valid when prepare built every root as shared work.
+    needs: [revision, build]
     if: >-
       !cancelled() &&
-      needs.prepare.result == 'success' &&
-      (needs.build.result == 'success' ||
-       (needs.build.result == 'skipped' && needs.prepare.outputs.packages == '[]')) &&
+      needs.build.result == 'success' &&
       github.ref_name == github.event.repository.default_branch &&
       (github.event_name != 'workflow_dispatch' || inputs.packages == '')
     runs-on: ubuntu-24.04
@@ -142,7 +89,7 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ needs.prepare.outputs.revision }}
+          ref: ${{ needs.revision.outputs.revision }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -153,6 +100,13 @@ jobs:
             max-jobs = 1
             cores = 2
 
+      # Source-dependent evaluation may need outputs built on the other architecture.
+      - name: Read the jodtv binary cache
+        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: jodtv
+          skipPush: true
+
       - name: Check cache retention
         run: python3 -B -m unittest discover -s scripts -p test_gc_caches.py
 
@@ -161,11 +115,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CACHIX_GC_AUTH_TOKEN: ${{ secrets.CACHIX_GC_AUTH_TOKEN }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          BUILT_REVISION: ${{ needs.prepare.outputs.revision }}
+          BUILT_REVISION: ${{ needs.revision.outputs.revision }}
         run: |
           if [ -z "$CACHIX_GC_AUTH_TOKEN" ]; then
             echo '::error::Add CACHIX_GC_AUTH_TOKEN as a Cachix personal API token from https://app.cachix.org/personal-auth-tokens; the per-cache read/write token is not sufficient.'
             exit 1
           fi
           python3 -B scripts/gc-caches.py --apply \
-            --branch "$DEFAULT_BRANCH" --revision "$BUILT_REVISION"
+            --branch "$DEFAULT_BRANCH" --revision "$BUILT_REVISION" \
+            --system x86_64-linux --system aarch64-linux

@@ -81,12 +81,24 @@ remain private to the module interface rather than exporting binaries tied to
 a different kernel.
 
 `packages.x86_64-linux` exposes the full package set. The aarch64-linux output
-omits EDCB-Wine, HonomiTV/KonomiTV and Intel encoding packages until their ARM packaging is
-validated. The aarch64-darwin output contains Hiraku, libaribb61, libaribtlv, PSI/SI tools,
+omits the five architecture-specific bundles/encoders listed below. The aarch64-darwin output contains Hiraku, libaribb61, libaribtlv, PSI/SI tools,
 mmt2ts, tsreadex, tsreplace and the FFmpeg patchset. Output lists are explicit to keep
 source-dependent packages from forcing evaluation of unrelated tools.
 An output's presence is not a claim that it was built on that platform. HonomiTV and the FFmpeg patchset require source-dependent evaluation;
 `--option allow-import-from-derivation false` reports those requirements explicitly.
+
+CI builds both Linux outputs on native runners (`ubuntu-24.04` and
+`ubuntu-24.04-arm`) at one pinned revision. Each architecture builds and uploads
+shared derivations before its package matrix. Manual package selections are
+intersected with each platform's exports; unknown names fail. Cache GC runs only
+after both architectures succeed and protects both architectures for the current
+and previous retained revisions.
+
+ARM Linux includes HonomiTV/KonomiTV with FFmpeg; the bundled QSVEncC/NVEncC
+encoders are unavailable there. The five excluded packages are `amatsukaze`
+(x64 bundle/native engine), `edcb-wine` (Windows x64/Wine), `intel-media-sdk-h`
+and `qsvencc` (Intel stack), and `nvencc` (amd64 bundle and x86 CUDA source setup).
+CI build success does not verify tuner, smart-card or GPU operation.
 
 `nix build .#mmt2ts` builds the standalone Linux/macOS package containing
 `mmt2ts`, `ts2mmt` and `mmtcut` for MMT/TLV and MPEG-2 TS conversion, inspection,

@@ -67,19 +67,43 @@ def plan_build(roots, graph):
     return targets, remaining, consumers
 
 
+def select_packages(requested, available, known):
+    unknown = sorted(set(requested) - set(known))
+    if unknown:
+        raise ValueError("Unknown packages: " + ", ".join(unknown))
+    return [name for name in requested if name in available] if requested else available
+
+
+def emit_packages(packages):
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+            output.write("packages=" + json.dumps(packages) + "\n")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--system", default="x86_64-linux")
     parser.add_argument("--packages", default="", help="Space/comma-separated names; empty selects all")
     parser.add_argument("--build", action="store_true", help="Build the plan; otherwise only display it")
+    parser.add_argument("--filter-supported", action="store_true", help="Skip known packages not exported on this system")
     args = parser.parse_args()
     attr = f".#packages.{args.system}"
     available = nix_json("eval", "--impure", "--json", attr, "--apply", "builtins.attrNames")
     requested = list(dict.fromkeys(args.packages.replace(",", " ").split()))
-    unknown = sorted(set(requested) - set(available))
-    if unknown:
-        parser.error("Unknown packages: " + ", ".join(unknown))
-    selected = requested or available
+    known = (nix_json("eval", "--impure", "--json", ".#legacyPackages." + args.system,
+                      "--apply", "builtins.attrNames")
+             if args.filter_supported else available)
+    try:
+        selected = select_packages(requested, available, known)
+    except ValueError as error:
+        parser.error(str(error))
+    skipped = sorted(set(requested) - set(selected))
+    if skipped:
+        print(f"Not exported on {args.system}: {', '.join(skipped)}", flush=True)
+    if not selected:
+        if args.build:
+            emit_packages([])
+        return
     names = "[ " + " ".join(json.dumps(name) for name in selected) + " ]"
     roots = nix_json(
         "eval", "--impure", "--json", attr, "--apply",
@@ -102,9 +126,7 @@ def main():
                 input="".join(f"{drv}^{','.join(outputs)}\n" for drv, outputs in targets.items()),
                 text=True, check=True,
             )
-        if os.environ.get("GITHUB_OUTPUT"):
-            with open(os.environ["GITHUB_OUTPUT"], "a") as output:
-                output.write("packages=" + json.dumps(remaining) + "\n")
+        emit_packages(remaining)
 
 
 if __name__ == "__main__":
