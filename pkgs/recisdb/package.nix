@@ -21,12 +21,12 @@ let
 in
 rustPlatform.buildRustPackage {
   pname = "recisdb";
-  version = "1.3.0-unstable-2026-10-23";
+  version = "1.3.0-unstable-2026-10-24";
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "recisdb-rs";
-    rev = "662f616db9c2e3f7e82fe188c9d75aa7d06cf2b2";
-    hash = "sha256-JVXrlb/LJ/z+YP5sRNzfrB2GN2sXJ9ElDScFoODDE5Y=";
+    rev = "ff135958801c53088c6eec41cd8827af20347be1";
+    hash = "sha256-O8rhUp0nBcLYbw1cm5ks1mU+wPIjbdNHZY1X321CPYU=";
   };
   cargoHash = "sha256-pMBiqzAJ/Dqg3AnUV8O7D1ItQo/sBSXerlocpcop3Vg=";
   buildNoDefaultFeatures = true;
