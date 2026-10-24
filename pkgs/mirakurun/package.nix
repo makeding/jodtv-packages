@@ -14,13 +14,13 @@
 
 buildNpmPackage rec {
   pname = "mirakurun";
-  version = "4.1.5-unstable-2026-10-23";
+  version = "4.1.5-unstable-2026-10-24";
 
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "Mirakurun";
-    rev = "87f0ac5b29b9f29c699ec5f51a5ad87480bbc600";
-    sha256 = "sha256-SqIcFEoeWIEyNnNZgtukk8gLAoaChXr3QyFgeegewmc=";
+    rev = "6a1666386218ffb1939e123c1a5245966dfe762e";
+    sha256 = "sha256-DCYvOQWumYp4OpEVaJd+wZP239cAsU9K6oh3GIYNocw=";
   };
 
   postUnpack = ''
