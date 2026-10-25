@@ -19,8 +19,8 @@ buildNpmPackage rec {
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "Mirakurun";
-    rev = "8f8c850844bd624f357f328aeb7e64daeb6191a8";
-    sha256 = "sha256-74nDN1SI7gN/8taZE0F0+pHV0YwkmajOOZ4l88ynPsE=";
+    rev = "66e71af9beeb999bf8cb9e2bb158a03397efa363";
+    sha256 = "sha256-4ro9LZnspV+6iQZmUqVPNhzTYDWoyhI7mE7MYhOypXs=";
   };
 
   postUnpack = ''
