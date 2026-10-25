@@ -37,6 +37,12 @@ stdenv.mkDerivation rec {
   ];
 
   postPatch = ''
+    # Some standard library versions do not expose uint8_t through <memory>.
+    # Skip this workaround once upstream includes a fixed-width integer header.
+    if ! grep -Eq '^[[:space:]]*#[[:space:]]*include[[:space:]]*[<"](cstdint|stdint\.h)[>"]' src/tlvTableFactory.h; then
+      sed -i '1i#include <cstdint>' src/tlvTableFactory.h
+    fi
+
     substituteInPlace Makefile \
       --replace-fail 'TSDUCK_INC = $(shell pkg-config --cflags-only-I tsduck)' \
                     'TSDUCK_INC = -I${tsduck}/include/tsduck -I${tsduck}/include/tscore' \
