@@ -1,6 +1,7 @@
 import argparse
 import importlib.util
 from pathlib import Path
+import shlex
 import unittest
 from unittest.mock import patch
 
@@ -11,7 +12,7 @@ spec.loader.exec_module(bump)
 
 class BumpTests(unittest.TestCase):
     def test_mmt2ts_tracks_stable_releases_in_daily_updates(self):
-        self.assertIn("mmt2ts", bump.packages(upstream_only=True))
+        self.assertIn("mmt2ts", bump.packages())
         args = argparse.Namespace(version=None, system="aarch64-darwin", build=False)
         command = next(bump.commands(["mmt2ts"], args))
         self.assertEqual(command[command.index("--version") + 1], "stable")
@@ -31,21 +32,22 @@ class BumpTests(unittest.TestCase):
         with patch.object(bump.platform, "machine", return_value="arm64"), patch.object(bump.platform, "system", return_value="Darwin"):
             self.assertEqual(bump.native_system(), "aarch64-darwin")
 
-    def test_daily_updates_skip_maintained_software(self):
+    def test_daily_workflow_updates_maintained_software(self):
         maintained = {"epgstation-h", "hiraku", "honomitv", "libaribb61", "libaribtlv",
                       "librw5100", "mirakurun", "pcsc-rw5100", "recdvb", "recisdb", "tsreplace"}
-        upstream = set(bump.packages(upstream_only=True))
-        self.assertTrue(maintained.isdisjoint(upstream))
-        self.assertTrue(maintained.issubset(bump.packages()))
-        self.assertTrue({"konomitv", "epgstation-upstream", "amatsukaze", "nvencc"}.issubset(upstream))
+        workflow = (bump.ROOT / ".github/workflows/bump-packages.yml").read_text()
+        command = shlex.split(workflow.split("--command ", 1)[1].splitlines()[0])
+        self.assertEqual(command[:2], ["python3", "scripts/bump-deps.py"])
+        available = set(bump.packages())
+        self.assertTrue(maintained.issubset(available))
         with patch.object(bump.subprocess, "run") as run, patch("builtins.print") as output:
-            self.assertEqual(bump.main(["--all", "--upstream-only", "--dry-run"]), 0)
+            self.assertEqual(bump.main([*command[2:], "--dry-run"]), 0)
             run.assert_not_called()
             commands = [call.args[0] for call in output.call_args_list
                         if call.args[0].startswith("+ nix-update ")]
-            self.assertEqual(len(commands), len(upstream))
+            self.assertEqual(len(commands), len(available))
             for name in maintained:
-                self.assertFalse(any(f".{name} " in cmd for cmd in commands))
+                self.assertTrue(any(f"legacyPackages.x86_64-linux.{name} " in cmd for cmd in commands))
 
     def test_branch_version_uses_exact_commit_manifest_not_old_fork_tag(self):
         revision = "b" * 40

@@ -22,11 +22,6 @@ SUBPACKAGES = {"honomitv": "frontend", "konomitv": "frontend",
 ALIASES = {"epgstation": "epgstation-h"}
 # The firmware pin also has an independently verified extracted SYS checksum.
 EXCLUDED = {"a865r-firmware", "ffmpeg-libaribtlv", "edcb-wine"}
-# Maintained here and bumped together with their source changes; CI skips them.
-MAINTAINED = {
-    "epgstation-h", "hiraku", "honomitv", "libaribb61", "libaribtlv",
-    "librw5100", "mirakurun", "pcsc-rw5100", "recdvb", "recisdb", "tsreplace",
-}
 MANIFESTS = {
     "epgstation-h": ("package.json", "json"),
     "epgstation-upstream": ("package.json", "json"),
@@ -123,10 +118,9 @@ def version_mode(name, args):
     return args.version or ("stable" if name in RELEASES else "branch")
 
 
-def packages(upstream_only=False):
+def packages():
     return sorted(p.parent.name for p in (ROOT / "pkgs").glob("*/package.nix")
-                  if p.parent.name not in EXCLUDED
-                  and (not upstream_only or p.parent.name not in MAINTAINED))
+                  if p.parent.name not in EXCLUDED)
 
 
 def commands(names, args):
@@ -149,14 +143,13 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("packages", nargs="*", help="package names (also accepts the epgstation alias)")
     parser.add_argument("--all", action="store_true", help="update all supported packages serially")
-    parser.add_argument("--upstream-only", action="store_true", help="skip locally maintained software (for daily CI updates)")
     parser.add_argument("--list", action="store_true", help="list supported packages")
     parser.add_argument("--dry-run", action="store_true", help="print commands without network access or writes")
     parser.add_argument("--version", help="nix-update version: stable, branch, branch=NAME, skip, or explicit version")
     parser.add_argument("--system", default=native_system(), help="evaluation/build system (default: native host; foreign systems require a matching builder)")
     parser.add_argument("--build", action="store_true", help="also build updated packages; needs a matching builder")
     args = parser.parse_args(argv)
-    available = packages(upstream_only=args.upstream_only)
+    available = packages()
     if args.list:
         print("\n".join(available))
         return 0
