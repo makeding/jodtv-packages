@@ -117,7 +117,7 @@ in
     }
   );
   bs4k-pyav = pkgs.runCommand "bs4k-pyav" { } ''
-    PYTHONPATH=${nativeAV "honomitv"}/${pkgs.python314.sitePackages} ${pkgs.python314.interpreter} - <<'PY'
+    PYTHONPATH=${nativeAV "honomitv"}/${pkgs.python313.sitePackages} ${pkgs.python313.interpreter} - <<'PY'
     import av
     assert 'libaribtlv' in av.formats_available, av.library_versions
     PY
