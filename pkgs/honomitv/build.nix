@@ -214,8 +214,8 @@ stdenv.mkDerivation {
     # Make config.yaml path configurable via environment variable
     substituteInPlace app/config.py \
       --replace-fail "import asyncio" "import asyncio"$'\n'"import os" \
-      --replace-fail "_CONFIG_YAML_PATH = BASE_DIR.parent / 'config.yaml'" \
-                     "_CONFIG_YAML_PATH = Path(os.environ.get('HONOMITV_CONFIG_PATH', BASE_DIR.parent / 'config.yaml'))"
+      --replace-fail "_CONFIG_YAML_PATH = BASE_DIR.parent / f'config{TEST_SUFFIX}.yaml'" \
+                     "_CONFIG_YAML_PATH = Path(os.environ.get('HONOMITV_CONFIG_PATH', BASE_DIR.parent / f'config{TEST_SUFFIX}.yaml'))"
 
     # The NixOS module exposes Uvicorn directly.  Keep the upstream startup
     # lifecycle intact, but replace Akebi with a local no-op and skip its
