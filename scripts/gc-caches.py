@@ -3,6 +3,8 @@
 
 Default is read-only. The workflow owns the build-success gate; this script
 also checks that the built revision is still the default branch's head.
+Require current package roots, and retain all cached paths in both build graphs
+even when a historical package root has already disappeared from the cache.
 """
 
 import argparse
@@ -288,7 +290,8 @@ def run_gc(github, cachix, upstream, repository, branch, revision, cache, system
         flake = "." if build_revision == revision else flake_at_revision(build_revision)
         for system in systems:
             build_roots, build_paths = current_paths(system, flake)
-            roots.update({f"{build_revision}:{system}:{name}": root for name, root in build_roots.items()})
+            if build_revision == revision:
+                roots.update({f"{build_revision}:{system}:{name}": root for name, root in build_roots.items()})
             protected.update(build_paths)
     print(f"Retaining build revisions: {', '.join(revisions)}", flush=True)
     github_entries = github_caches(github, repository)

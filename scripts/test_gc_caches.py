@@ -58,7 +58,7 @@ class CacheRetentionTests(unittest.TestCase):
             ["current", "previous"],
         )
 
-    def test_gc_protects_roots_from_both_retained_builds(self):
+    def test_gc_requires_current_roots_and_protects_both_retained_build_graphs(self):
         github, cachix = Mock(), Mock()
         with patch.object(gc, "at_revision", return_value=True), \
              patch.object(gc, "cachix_contents", return_value={A, B}), \
@@ -76,7 +76,8 @@ class CacheRetentionTests(unittest.TestCase):
              patch("builtins.print"):
             gc.run_gc(github, cachix, Mock(), "owner/repo", "master", "current", "jodtv", ["x86_64-linux"], False)
 
-        self.assertEqual(set(plan.call_args.args[3]), {"current:x86_64-linux:pkg", "previous:x86_64-linux:pkg"})
+        self.assertEqual(set(plan.call_args.args[3]), {"current:x86_64-linux:pkg"})
+        self.assertEqual(plan.call_args.args[4], {A, B})
 
     def test_gc_unions_architectures_before_planning_deletions(self):
         github, cachix = Mock(), Mock()
@@ -229,6 +230,25 @@ class CacheRetentionTests(unittest.TestCase):
         self.assertEqual(obsolete, {D})
         self.assertIn(A, protected)
         upstream.request.assert_called_once_with(f"/{A}.narinfo", missing_ok=True, text=True)
+
+    def test_missing_historical_root_keeps_its_cached_dependencies_and_closure(self):
+        api, upstream = Mock(), Mock()
+        api.request.side_effect = lambda path: {
+            "/api/v1/cache/jodtv/contents": [A, C, D],
+            "/api/v1/cache/jodtv/pin": [],
+            f"/api/v1/cache/jodtv/{A}.narinfo": info(NAR_A),
+            f"/api/v1/cache/jodtv/{C}.narinfo": info(NAR_C, [f"{B}-runtime"]),
+        }[path]
+        upstream.request.return_value = f"NarHash: sha256:{NAR_B}\nReferences: \n"
+        missing_historical_root = "f" * 32
+        obsolete, protected, nars = gc.cachix_plan(
+            api, upstream, "jodtv", {"current": {"outputPath": f"{A}-current"}},
+            {A, missing_historical_root, C}, [], REF,
+        )
+        self.assertEqual(obsolete, {D})
+        self.assertEqual(protected, {A, B, C, missing_historical_root})
+        self.assertEqual(nars, {NAR_A, NAR_B, NAR_C})
+        upstream.request.assert_called_once_with(f"/{B}.narinfo", missing_ok=True, text=True)
 
     def test_cachix_pins_preserve_unenumerable_history_and_github_nars(self):
         api = Mock()
