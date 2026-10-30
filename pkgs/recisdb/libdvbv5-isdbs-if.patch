@@ -1,4 +1,4 @@
-recisdb-only adaptation for the recdvb ISDB-S IF ABI.
+recisdb-only adaptation for the ISDB-S IF ABI.
 
 Built against v4l-utils 1.32.0. Keep SYS_ISDBS tuning/readback in kHz IF;
 leave DVB-S/S2 RF/LNB conversion intact. Automatic tuning-time SEC is
@@ -22,7 +22,7 @@ Upstream submission is deferred pending review of the RF-facing API.
  	uint16_t t = 0;
  	int rc;
  
-+	/* recisdb uses the recdvb ABI: ISDB-S frequencies are already IF, in
++	/* recisdb uses the ISDB-S ABI: ISDB-S frequencies are already IF, in
 +	 * kHz. Do not subtract an LNB oscillator or change SEC settings. */
 +	if (p->current_sys == SYS_ISDBS) {
 +		parms->high_band = 0;

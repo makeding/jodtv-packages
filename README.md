@@ -109,9 +109,7 @@ nix.settings = {
 
 ```nix
 final: prev: {
-  recpt1 = prev.recpt1.override { libaribb25 = final.myAribLibrary; };
   recisdb = prev.recisdb.override { libaribb25 = final.myAribLibrary; };
-  recdvb = prev.recdvb.override { libaribb25 = final.myAribLibrary; };
 }
 ```
 
@@ -125,7 +123,7 @@ final: prev: {
 ```sh
 nix build --no-link .#checks.x86_64-linux.dependency-injection \
   .#checks.x86_64-linux.dtv
-nix build --no-link .#recisdb .#recpt1 .#recdvb
+nix build --no-link .#recisdb
 ```
 
 checks では録画ツールの依存パッケージの差し替えと NixOS モジュールの組み合わせを
@@ -154,7 +152,7 @@ Git リポジトリが公開されていることだけでは、利用許諾に�
 リモートの受信元を指定しても、ローカルのドライバーやエージェントは有効になりません。
 各項目では `enable`、追加の `packages`、Mirakurun 固有の `settings` を設定できます。
 ローカル受信では `b25`、`b61`、`lnb`、`strip`、`args`、`argsBS4K` などを指定できます。
-`lnb = true` は BS/CS/BS4K のローカル受信で 15V 給電を要求します（recisdb: `--lnb 15v`、recdvb: `--lnb 15`）。既定値は `false`（電圧未指定）です。GR 専用チューナーと明示的な command 指定には適用しません。
+`lnb = true` は BS/CS/BS4K のローカル受信で 15V 給電を要求します（`--lnb 15v`）。既定値は `false`（電圧未指定）です。GR 専用チューナーと明示的な command 指定には適用しません。
 `dtv.packages` で録画ツール、Hiraku、変換ツールを差し替えられ、利用側の overlay も反映されます。
 
 ローカルチューナーを Hiraku 経由で公開するには `dtv.hirakud.enable` を有効にします。
@@ -217,7 +215,7 @@ B は次の参照だけでローカル BS4K/B61 録画に利用できます。
 }
 ```
 
-Mirakurun/Hirakud の recisdb/recdvb コマンドに `--cas-proxy` が追加されます。
+Mirakurun/Hirakud の recisdb コマンドに `--cas-proxy` が追加されます。
 チューナー単位の `casProxy = null` でローカルカードに戻せます。
 A が `0.0.0.0` で待ち受ける場合は `services.casproxyserver.advertiseAddress` に
 B から到達できるアドレスを指定してください。A の許可ネットワークとファイアウォールは
@@ -259,16 +257,17 @@ Python 3.13 / uv lock を利用します。Nix のパス・書き込み先・直
 ファイアウォール、ディレクトリーへのアクセス、サービス間の依存関係は引き続き
 Nix で管理するため、アプリ側でポートや保存先を変える際は Nix 側も合わせてください。
 
-## recisdb への移行
+## recisdb の録画仕様
 
-PT3/PX4/TBS6812 は recisdb 1.3.0（`83e8068`）を使用します。`dtv.packages.recpt1` は
-`dtv.packages.recisdb` に変更してください。`args` は recisdb の構文
-（例: `--lnb 15v`）に更新してください。明示的な `command` は自動変換しません。
+すべてのローカルチューナー（PT3/PX4/A865R/TBS6812/Siano/DVB）は
+`dtv.packages.recisdb` を使います。公開する録画パッケージは recisdb に統一し、
+公開していないパッケージ属性・設定オプションの選択は Nix 評価エラーになります。
+`args` と `argsBS4K` は recisdb の構文を使います。明示的な `command` は自動変換しません。
 Mirakurun/Hirakud 共通のアダプターが地上波の数値チャンネルに `T` を付け、
 BS/CS/C 形式はそのまま渡します。`b25 = false` は `--no-decode`、
-`strip = false` は `--no-strip` になります。TBS6812 の BS/CS/BS4K も recisdb を使います。
-数値 device は `/dev/dvb/adapterN/frontend0` に変換し、BS4K は `--b61` と
-`argsBS4K`（`--cas-proxy` など）を渡します。他の DVB ドライバーは従来どおりです。
+`strip = false` は `--no-strip` になります。DVB の数値 device は
+`/dev/dvb/adapterN/frontend0` に変換し、デバイスパスはそのまま渡します。
+BS4K は `--b61` と `argsBS4K`（`--cas-proxy` など）を渡します。
 
 外部 `libaribb25` と `libaribb61` を必須とし、内蔵ライブラリへのフォールバックはありません。
 差し替え先には SIMD を含む上流 B25 ABI が必要です。既定 feature を無効化し、
@@ -277,49 +276,14 @@ BS/CS/C 形式はそのまま渡します。`b25 = false` は `--no-decode`、
 `decode --b61` と実験的な DVB ISDB-S3 選局に対応します。デコーダーの既定値は変更しません。
 独自のカードリーダー優先機能（`--card`）は使えません。
 
-DIY 用に `recpt1` の独立パッケージと overlay 属性を引き続き公開します。
-外部 `libaribb25` の差し替えも可能です。チューナーで使う場合は
-`dtv.tuners[].command` に recpt1 の引数を明示し、その項目の `packages` に
-`pkgs.recpt1` を追加してください。PT3/PX4 の既定コマンドは recisdb です。
-
-## recdvb
-
-`recdvb` は B25 TS と B61 MMT/TLV の録画に対応します。既定では両方を有効にし、
-実行時に `--b25` または `--b61` を指定します。両方を省略すると未復号で出力します。
-`--cas-proxy host:port` は B61 のカードプロキシを指定します。
-`recdvb`、`recpt1ctl`、`chkdvbsignal`、`tssplitter_lite` をインストールします。
-DVB の通常録画と BS4K は共通の `dtv.packages.recdvb` を使い、
-`b25`、`b61`、`args`、`argsBS4K` で引数を選択します。
-
-`libaribb25` と `libaribb61` は独立して差し替えられます。
-`withB25 = false` または `withB61 = false` で該当機能と依存を除外できます。
-異なる PC/SC 実装が必要な構成は、同じパッケージ定義から個別にビルドし、
-録画プロセスを分離してください。
-
-```nix
-recdvb.override {
-  libaribb25 = myB25Library;
-  libaribb61 = myB61Library;
-}
-```
-
-依存の差し替え、機能の構成、インストール後のコマンド名・オプションと
-Mirakurun/Hirakud が生成する録画引数を検証します。
-Linux の実ビルド、実機の選局・復号はそれぞれ別の検証です。
-
-```sh
-nix build --no-link .#checks.x86_64-linux.recdvb-configure \
-  .#checks.x86_64-linux.recdvb-capture .#recdvb
-```
-
 ## libaribb61
 
 Linux/macOS 向けの独立した MMT/TLV ACAS デスクランブルライブラリです。
 パッケージ一覧と overlay で公開し、`nix build .#libaribb61` でビルドできます。
 ヘッダー `aribb61/arib_std_b61.h`、共有ライブラリ、pkg-config 用の
 `libaribb61.pc` をインストールします。C API は B25 に似ていますが ABI 互換ではありません。
-`recdvb` の `--b61` はこの共有ライブラリを使用します。
-利用側で `recdvb.override { libaribb61 = myB61Library; }` により差し替えられます。
+`recisdb` の `--b61` はこの共有ライブラリを使用します。
+利用側で `recisdb.override { libaribb61 = myB61Library; }` により差し替えられます。
 上流の core/C API テストと
 インストール済みライブラリへの C API リンクを検証します。カード/プロキシや
 実放送のデスクランブルは別途実機での検証が必要です。

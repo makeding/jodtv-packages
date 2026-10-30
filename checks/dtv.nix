@@ -593,12 +593,12 @@ let
       }
     ];
   };
-  dvbCaptureRecorder = pkgs.writeShellScriptBin "recdvb" ''
+  dvbCaptureRecorder = pkgs.writeShellScriptBin "recisdb" ''
     printf '%s\n' "$@"
   '';
   dvbCaptureConfig = configOf {
     nixpkgs.overlays = [ (_final: _prev: { inherit (pkgs) writeShellScript; }) ];
-    dtv.packages.recdvb = dvbCaptureRecorder;
+    dtv.packages.recisdb = dvbCaptureRecorder;
     dtv.casProxy = casProvider.dtv.exports.casProxy;
     dtv.mirakurun.enable = true;
     dtv.hirakud.enable = true;
@@ -614,8 +614,7 @@ let
         device = "2";
         lnb = true;
         args = [
-          "--sid"
-          "101,102"
+          "--no-strip"
         ];
       }
       {
@@ -636,6 +635,12 @@ let
         b25 = false;
         b61 = false;
         strip = false;
+      }
+      {
+        name = "Siano";
+        driver = "siano";
+        mode = [ "GR" ];
+        device = "/dev/dvb/adapter5/frontend0";
       }
     ];
   };
@@ -853,23 +858,24 @@ let
     && require "PT4K exclusive modes" pt4kModesContract;
 in
 {
-  recdvb-capture =
+  dvb-capture =
     assert !dvbCaptureConfig.services.casproxyserver.enable;
     assert !dvbCaptureConfig.services.pcscd.enable;
-    pkgs.runCommand "recdvb-capture" { } ''
-      test "$(${runDvbCapture "DVB" "BS15_0"})" = "$(printf '%s\n' --dev 2 --lnb 15 --strip --b25 --sid 101,102 BS15_0 - -)"
-      test "$(${runDvbCapture "DVB-BS4K" "BS17_0"})" = "$(printf '%s\n' --dev 2 --lnb 15 --strip --b61 --cas-proxy 192.0.2.10:24001 BS17_0 - -)"
-      test "$(${runDvbCapture "DVB-raw" "BS15_0"})" = "$(printf '%s\n' --dev 3 BS15_0 - -)"
-      test "$(${runDvbCapture "DVB-raw-BS4K" "BS17_0"})" = "$(printf '%s\n' --dev 3 BS17_0 - -)"
+    pkgs.runCommand "dvb-capture" { } ''
+      test "$(${runDvbCapture "DVB" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/dvb/adapter2/frontend0 --lnb 15v --no-strip -)"
+      test "$(${runDvbCapture "DVB-BS4K" "BS17_0"})" = "$(printf '%s\n' tune --channel BS17_0 --device /dev/dvb/adapter2/frontend0 --lnb 15v --b61 --cas-proxy 192.0.2.10:24001 -)"
+      test "$(${runDvbCapture "DVB-raw" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/dvb/adapter3/frontend0 --no-strip --no-decode -)"
+      test "$(${runDvbCapture "DVB-raw-BS4K" "BS17_0"})" = "$(printf '%s\n' tune --channel BS17_0 --device /dev/dvb/adapter3/frontend0 --no-strip --no-decode -)"
       test "$(${
         lib.replaceStrings [ "<channel>" ] [ "BS15_0" ]
           (builtins.head dvbCaptureConfig.services.mirakurun.tunerSettings).command
-      })" = "$(printf '%s\n' --dev 2 --lnb 15 --strip --b25 --sid 101,102 BS15_0 - -)"
+      })" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/dvb/adapter2/frontend0 --lnb 15v --no-strip -)"
       test "$(${
         lib.replaceStrings [ "<channel>" ] [ "BS17_0" ]
           (builtins.head dvbCaptureConfig.services.mirakurun.tunerSettings).commandBS4K
-      })" = "$(printf '%s\n' --dev 2 --lnb 15 --strip --b61 --cas-proxy 192.0.2.10:24001 BS17_0 - -)"
-      test "$(${runDvbCapture "DVB-local-BS4K" "BS17_0"})" = "$(printf '%s\n' --dev 4 --strip --b61 BS17_0 - -)"
+      })" = "$(printf '%s\n' tune --channel BS17_0 --device /dev/dvb/adapter2/frontend0 --lnb 15v --b61 --cas-proxy 192.0.2.10:24001 -)"
+      test "$(${runDvbCapture "DVB-local-BS4K" "BS17_0"})" = "$(printf '%s\n' tune --channel BS17_0 --device /dev/dvb/adapter4/frontend0 --b61 -)"
+      test "$(${runDvbCapture "Siano" "13"})" = "$(printf '%s\n' tune --channel T13 --device /dev/dvb/adapter5/frontend0 -)"
       touch $out
     '';
   recisdb-capture = pkgs.runCommand "recisdb-capture" { } ''

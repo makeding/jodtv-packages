@@ -31,8 +31,6 @@ MANIFESTS = {
     "recisdb": ("recisdb-rs/Cargo.toml", "package"),
     **{name: ("CMakeLists.txt", "cmake") for name in
        ("libaribb25", "libaribb61", "libaribtlv", "librw5100", "pcsc-rw5100")},
-    "recdvb": ("configure.ac", "autoconf"),
-    "recpt1": ("recpt1/configure.ac", "autoconf"),
     "tsreplace": ("app/rgy_version.h", "header"),
 }
 
@@ -58,7 +56,6 @@ def manifest_version(contents, kind):
     else:
         patterns = {
             "cmake": r'(?is)\bproject\s*\([^)]*?\bVERSION\s+"?([0-9][0-9A-Za-z.+-]*)',
-            "autoconf": r'AC_INIT\s*\(\s*\[[^]]+\]\s*,\s*\[([^]]+)\]',
             "header": r'(?m)^\s*#define\s+VER_STR_FILEVERSION\s+"([^"]+)"',
         }
         match = re.search(patterns[kind], contents)

@@ -25,7 +25,7 @@ On B (Colmena), reference A directly:
 ```
 
 Local BS4K/B61 capture through Mirakurun or Hirakud automatically passes
-`--cas-proxy` to recisdb/recdvb. Set a tuner's `casProxy = null` to use its local
+`--cas-proxy` to recisdb. Set a tuner's `casProxy = null` to use its local
 reader. A wildcard listener needs `services.casproxyserver.advertiseAddress`
 reachable from B. A retains control of its allowlist and firewall.
 
@@ -229,9 +229,7 @@ replace that dependency with its own package without changing this repository:
 
 ```nix
 final: prev: {
-  recpt1 = prev.recpt1.override { libaribb25 = final.myAribLibrary; };
   recisdb = prev.recisdb.override { libaribb25 = final.myAribLibrary; };
-  recdvb = prev.recdvb.override { libaribb25 = final.myAribLibrary; };
 }
 ```
 
@@ -244,7 +242,7 @@ belong to the consumer repository and must never be imported here.
 ```sh
 nix build --no-link .#checks.x86_64-linux.dependency-injection \
   .#checks.x86_64-linux.dtv
-nix build --no-link .#recisdb .#recpt1 .#recdvb
+nix build --no-link .#recisdb
 ```
 
 Checks cover recorder dependency injection and NixOS
@@ -272,7 +270,7 @@ name (optional), broadcast modes and device. `command` supports an explicit argu
 Mirakurun. Remote sources do not install local drivers or enable a local agent.
 Each entry supports `enable`, additional `packages` and native tuner `settings`.
 Local capture options include `b25`, `b61`, `lnb`, `strip`, `args` and `argsBS4K`.
-`lnb = true` requests 15V LNB power for local BS/CS/BS4K capture (`--lnb 15v` for recisdb, `--lnb 15` for recdvb). It defaults to `false` (voltage unset); GR-only tuners and explicit command overrides are unaffected.
+`lnb = true` requests 15V LNB power for local BS/CS/BS4K capture (`--lnb 15v`). It defaults to `false` (voltage unset); GR-only tuners and explicit command overrides are unaffected.
 `dtv.packages` supplies replaceable recorder, Hiraku and conversion tools and
 respects consumer overlays. Enable `dtv.hirakud.enable` to serve local tuners
 through Hiraku. Local entries are exported by default; `serve.enable = false`
@@ -356,16 +354,16 @@ aligned if you change ports or storage paths in the application.
 
 ## recisdb capture contract
 
-PT3/PX4/TBS6812 capture uses recisdb 1.3.0 (`83e8068`). `dtv.packages.recisdb` replaces the former
-`dtv.packages.recpt1` option. Custom `args` must use recisdb options (for example,
-`--lnb 15v`); explicit `command` values remain caller-owned.
-The generated adapter accepts existing numeric terrestrial channels and prefixes
-`T`; BS/CS/C-prefixed channels pass through unchanged. Both Mirakurun and Hirakud
-use this adapter. Decoding and stripping stay enabled by default; `b25 = false`
-and `strip = false` generate `--no-decode` and `--no-strip` respectively.
-TBS6812 BS/CS/BS4K capture uses recisdb. Numeric device IDs map to
-`/dev/dvb/adapterN/frontend0`; BS4K adds `--b61` and passes `argsBS4K`
-(including `--cas-proxy`). Other DVB drivers continue to use recdvb.
+All local tuners (PT3/PX4/A865R/TBS6812/Siano/DVB) use
+`dtv.packages.recisdb`. The public recorder package is recisdb; selecting an
+unpublished package attribute or configuration option fails Nix evaluation.
+Custom `args` and `argsBS4K` must use recisdb options; explicit `command` values
+remain caller-owned. The generated adapter prefixes numeric terrestrial channels
+with `T`; BS/CS/C-prefixed channels pass through unchanged. Both Mirakurun and
+Hirakud use this adapter. Decoding and stripping stay enabled by default;
+`b25 = false` and `strip = false` generate `--no-decode` and `--no-strip`.
+Numeric DVB device IDs map to `/dev/dvb/adapterN/frontend0`; device paths pass
+through unchanged. BS4K adds `--b61` and passes `argsBS4K` (including `--cas-proxy`).
 
 The package disables upstream default features and enables `bg-runtime`, `b61`
 and Linux `dvb` support. Both `libaribb25` and `libaribb61` are package arguments
@@ -376,53 +374,18 @@ ISDB-S3 tuning; decoder defaults stay unchanged.
 The upstream prioritized-card-reader extension is disabled; `--card` selection
 is therefore unavailable. Private library implementations remain consumer-owned.
 
-`recpt1` remains available as a standalone package and overlay attribute for DIY
-setups, including external `libaribb25` injection. To use it in a tuner, supply
-an explicit `dtv.tuners[].command` with recpt1 arguments and add `pkgs.recpt1`
-to that entry's `packages`. Generated PT3/PX4 commands use recisdb by default.
-
-## recdvb
-
-`recdvb` supports B25 TS and B61 MMT/TLV recording in one package. Both features
-are enabled by default; select `--b25` or `--b61` when recording, or omit both
-for raw output. `--cas-proxy host:port` selects a B61 card proxy.
-The installed tools are `recdvb`, `recpt1ctl`, `chkdvbsignal` and `tssplitter_lite`.
-Generated DVB commands use `dtv.packages.recdvb` for both ordinary and BS4K
-capture, preserving `b25`, `b61`, `args` and `argsBS4K` selection.
-
-Both libraries are independent package arguments. `withB25 = false` and
-`withB61 = false` omit the corresponding feature and dependency. Consumers
-requiring different PC/SC implementations must keep those implementations in
-separate recorder processes; build isolated instances from this same definition.
-
-```nix
-recdvb.override {
-  libaribb25 = myB25Library;
-  libaribb61 = myB61Library;
-}
-```
-
-Validation covers dependency replacement, feature configuration, installed CLI
-names/options, and generated Mirakurun/Hirakud command arguments. Linux builds
-and actual tuning/descrambling are separate checks.
-
-```sh
-nix build --no-link .#checks.x86_64-linux.recdvb-configure \
-  .#checks.x86_64-linux.recdvb-capture .#recdvb
-```
-
 ## libaribb61
 
 `libaribb61` is an independent streaming MMT/TLV ACAS descrambler library,
 exported through the package set and overlay on Linux and macOS. It installs
 `aribb61/arib_std_b61.h`, the shared library and `libaribb61.pc` for pkg-config
 consumers. Build it with `nix build .#libaribb61`. Its C API resembles B25 but is
-not ABI compatible. `recdvb` links this library for `--b61`. The library can be
+not ABI compatible. `recisdb` links this library for `--b61`. The library can be
 replaced by a consumer overlay:
 
 ```nix
 final: prev: {
-  recdvb = prev.recdvb.override { libaribb61 = final.myB61Library; };
+  recisdb = prev.recisdb.override { libaribb61 = final.myB61Library; };
 }
 ```
 

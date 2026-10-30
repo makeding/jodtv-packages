@@ -9,7 +9,7 @@
   libaribb25,
 }:
 let
-  # This dependency is private to recisdb's recdvb-compatible IF interface.
+  # This dependency is private to recisdb's ISDB-S IF interface.
   recisdbDvb =
     (v4l-utils.override {
       withGUI = false;

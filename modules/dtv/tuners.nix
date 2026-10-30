@@ -141,19 +141,6 @@ let
     };
   };
   mmtsConverter = mmtsConverters.${cfg.mmtsConverter};
-  recorder =
-    t:
-    if
-      builtins.elem t.driver [
-        "pt3"
-        "px4"
-        "tbs6812"
-        "a865r"
-      ]
-    then
-      cfg.packages.recisdb
-    else
-      cfg.packages.recdvb;
   # Normalize legacy terrestrial channel numbers at the shared capture boundary.
   recisdbCommand =
     t:
@@ -174,76 +161,47 @@ let
     ];
   localCommand =
     t: fourK:
-    if
-      builtins.elem t.driver [
-        "pt3"
-        "px4"
-        "tbs6812"
-        "a865r"
-      ]
-    then
-      [
-        (toString (recisdbCommand t))
-        "<channel>"
-        "--device"
+    [
+      (toString (recisdbCommand t))
+      "<channel>"
+      "--device"
+      (
+        if
+          (
+            !(builtins.elem t.driver [
+              "pt3"
+              "px4"
+            ])
+          )
+          && t.device != null
+        then
+          if lib.hasPrefix "/dev/" t.device then t.device else "/dev/dvb/adapter${t.device}/frontend0"
+        else if t.device != null then
+          t.device
+        else
+          ""
+      )
+    ]
+    ++
+      lib.optionals
         (
-          if (t.driver == "tbs6812" || t.driver == "a865r") && t.device != null then
-            if lib.hasPrefix "/dev/" t.device then t.device else "/dev/dvb/adapter${t.device}/frontend0"
-          else if t.device != null then
-            t.device
-          else
-            ""
+          t.lnb
+          && lib.any (m: builtins.elem m t.mode) [
+            "BS"
+            "CS"
+            "BS4K"
+          ]
         )
-      ]
-      ++
-        lib.optionals
-          (
-            t.lnb
-            && lib.any (m: builtins.elem m t.mode) [
-              "BS"
-              "CS"
-              "BS4K"
-            ]
-          )
-          [
-            "--lnb"
-            "15v"
-          ]
-      ++ lib.optional (fourK && t.b61) "--b61"
-      ++ lib.optional (!t.strip) "--no-strip"
-      ++ lib.optional (!(if fourK then t.b61 else t.b25)) "--no-decode"
-      ++ casProxyArgs t fourK
-      ++ (if fourK then t.argsBS4K else t.args)
-      ++ [ "-" ]
-    else
-      [
-        (lib.getExe' cfg.packages.recdvb "recdvb")
-        "--dev"
-        (if t.device != null then t.device else "")
-      ]
-      ++
-        lib.optionals
-          (
-            t.lnb
-            && lib.any (m: builtins.elem m t.mode) [
-              "BS"
-              "CS"
-              "BS4K"
-            ]
-          )
-          [
-            "--lnb"
-            "15"
-          ]
-      ++ lib.optional t.strip "--strip"
-      ++ lib.optional (if fourK then t.b61 else t.b25) (if fourK then "--b61" else "--b25")
-      ++ casProxyArgs t fourK
-      ++ (if fourK then t.argsBS4K else t.args)
-      ++ [
-        "<channel>"
-        "-"
-        "-"
-      ];
+        [
+          "--lnb"
+          "15v"
+        ]
+    ++ lib.optional (fourK && t.b61) "--b61"
+    ++ lib.optional (!t.strip) "--no-strip"
+    ++ lib.optional (!(if fourK then t.b61 else t.b25)) "--no-decode"
+    ++ casProxyArgs t fourK
+    ++ (if fourK then t.argsBS4K else t.args)
+    ++ [ "-" ];
   argv =
     t: fourK:
     if fourK && t.commandBS4K != [ ] then
@@ -308,7 +266,7 @@ let
   dependencies =
     t:
     t.packages
-    ++ lib.optional (isLocal t) (recorder t)
+    ++ lib.optional (isLocal t) cfg.packages.recisdb
     ++ lib.optional (t.driver == "hiraku") cfg.packages.hiraku
     ++ lib.optional (t.driver != "remote" && has4k t && t.mmtsDecoder) mmtsConverter.package;
   modes = lib.concatMap (
@@ -372,7 +330,7 @@ in
       default = "dantto4k";
       description = "MMT/TLV to TS converter for non-remote BS4K tuners with mmtsDecoder enabled.";
     };
-    packages = lib.genAttrs [ "recisdb" "recdvb" "hiraku" "dantto4k" "mmt2ts" ] (
+    packages = lib.genAttrs [ "recisdb" "hiraku" "dantto4k" "mmt2ts" ] (
       name: lib.mkPackageOption pkgs name { }
     );
     casProxy = mkOption {
@@ -421,7 +379,7 @@ in
               device = mkOption {
                 type = types.nullOr nonEmpty;
                 default = null;
-                description = "Device path for recisdb, or adapter number for recdvb.";
+                description = "Device path for recisdb, or DVB adapter number for DVB drivers.";
               };
               b25 = mkOption {
                 type = types.bool;

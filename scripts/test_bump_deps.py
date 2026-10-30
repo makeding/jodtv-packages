@@ -34,7 +34,7 @@ class BumpTests(unittest.TestCase):
 
     def test_daily_workflow_updates_maintained_software(self):
         maintained = {"epgstation-h", "hiraku", "honomitv", "libaribb61", "libaribtlv",
-                      "librw5100", "mirakurun", "pcsc-rw5100", "recdvb", "recisdb", "tsreplace"}
+                      "librw5100", "mirakurun", "pcsc-rw5100", "recisdb", "tsreplace"}
         workflow = (bump.ROOT / ".github/workflows/bump-packages.yml").read_text()
         command = shlex.split(workflow.split("--command ", 1)[1].splitlines()[0])
         self.assertEqual(command[:2], ["python3", "scripts/bump-deps.py"])
@@ -70,7 +70,6 @@ class BumpTests(unittest.TestCase):
             ('{"version":"3.0.0-beta2"}', "json", "3.0.0-beta2"),
             ('[package]\nversion = "1.3.0"', "package", "1.3.0"),
             ('cmake_minimum_required(VERSION 3.16)\nproject(aribtlv VERSION 0.6.1 LANGUAGES C)', "cmake", "0.6.1"),
-            ('AC_INIT([recpt1], [1.2.1.1], email)', "autoconf", "1.2.1.1"),
             ('#define VER_STR_FILEVERSION "0.20"\r\n', "header", "0.20"),
         ]
         for contents, kind, expected in samples:
