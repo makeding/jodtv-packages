@@ -21,14 +21,14 @@
   gpac,
 }:
 let
-  version = "1.1.1.3";
+  version = "1.1.1.4";
   sourceBuild = callPackage ./native.nix {
     inherit version ffmpeg;
     src = fetchFromGitHub {
       owner = "rigaya";
       repo = "Amatsukaze";
       rev = version;
-      hash = "sha256-5kqbanjIBAJMlO1I/bvo7wVZkinyBewneZMtFBZUH/s=";
+      hash = "sha256-zg8Hczn92jNh8NJUyMw+6h9031fBtBqt63OhyoHr0aI=";
       fetchSubmodules = true;
     };
   };
@@ -51,7 +51,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
   src = fetchurl {
     url = "https://github.com/rigaya/Amatsukaze/releases/download/${finalAttrs.version}/Amatsukaze_linux_${finalAttrs.version}_x64.tar.xz";
-    hash = "sha256-WBG5QCndaTb1IseRnVbVZiYca7N8p2h2gzTo6ifyszU=";
+    hash = "sha256-59mPSwieljVVnK3Njw/owlJZ6LDMANfb/c+G96+RzkI=";
   };
 
   nativeBuildInputs = [

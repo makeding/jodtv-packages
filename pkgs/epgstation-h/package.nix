@@ -12,15 +12,15 @@ callPackage ./build.nix (
     "stdenv"
   ]
   // {
-    version = "3.0.0-beta3-unstable-2026-10-24";
+    version = "3.0.0-beta4-unstable-2026-10-31";
     src = fetchFromGitHub {
       owner = "makeding";
       repo = "EPGStation";
-      rev = "cce7d1972eb6d208fc46f944cc0e313d9aae6526";
-      hash = "sha256-EpTRRSd2EAhlJaD9UqiRzGkiZD5xriXf6mvfcT7wH2c=";
+      rev = "dc91d6b9e6801e20f14bee89d4e409737c66653d";
+      hash = "sha256-Yq9aovV5CqS+XfBJs3pQVhl3m3ZYqnmYQuq9RNImviw=";
     };
-    npmDepsHash = "sha256-zKlf7/n8DQdG+ChpCcArPQLNfN87L4OmuXpnCPUgenI=";
-    clientNpmDepsHash = "sha256-Mt+RNGdFVXHmFzza+g7rbCC0B59sv5kAebsEKddReIo=";
+    npmDepsHash = "sha256-QN8K91xKwUbyKEtaYjMCSb8JshkYx74DW6SHHxVN/Sk=";
+    clientNpmDepsHash = "sha256-XMLBpsQ7nIexHKFtt8tyE9/qLOx7dXBe1za3o1l7K38=";
     extraRuntimePackages = [ tsreplace ];
   }
 )
