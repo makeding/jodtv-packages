@@ -12,15 +12,15 @@
 
 rustPlatform.buildRustPackage (finalAttrs: rec {
   pname = "mirakc";
-  version = "3.4.91";
+  version = "3.4.92";
 
   src = fetchFromGitHub {
     owner = "mirakc";
     repo = "mirakc";
     tag = version;
-    hash = "sha256-Zd7uPDbqGOT2NFx6oC5BmxnXh8FiUTpPk/bxs5OP/qM=";
+    hash = "sha256-PbWRl0a54fZc93ZbNvKsVpw4TFgcMs3tF+IO4Q3M8P0=";
   };
-  cargoHash = "sha256-4q/M9zeGNiHyYzmnc6LcI1g9atHrIhto3/MILzqckUU=";
+  cargoHash = "sha256-YxKTZAjMyv8V+MP7mCp1e+t3UIcJwLEXritToBN62qE=";
 
   # The workspace also contains the optional FUSE timeshift filesystem.
   cargoBuildFlags = [
