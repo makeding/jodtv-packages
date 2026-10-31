@@ -8,7 +8,7 @@
     modules = [ "pt3_drv" ];
   };
   px4 = {
-    file = ../../kernel-modules/px4-drv.nix;
+    file = ../../pkgs/px4-drv/package.nix;
     modules = [ "px4_drv" ];
   };
   siano = {

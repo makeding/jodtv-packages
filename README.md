@@ -173,6 +173,33 @@ Hiraku の `listen` はアプリケーション本来の `address:port` 形式�
 変更できます。`mode` を明示した場合は展開せず、単一のチューナーとして扱います。
 `mode = []` はハードウェアの登録のみを行います。PT3 以外では `mode` の明示が必要です。
 
+## PX4 / PX-MLT / e-Better
+
+[`tsukumijima/px4_drv`](https://github.com/tsukumijima/px4_drv) v0.7.0 を
+`px4-drv` として公開しています。DKMS ではなく Nix が対象カーネル向けにビルドします。`nix build .#px4-drv` は既定のカーネル向けです。
+`dtv.tuners` では利用側の `boot.kernelPackages` に合わせて同じ定義からビルドし、
+ファームウェアと全対応機種の udev ルールも登録します。unfree の `px4-drv` を許可してください。
+
+```nix
+dtv.mirakurun.enable = true;
+dtv.tuners = [
+  { driver = "px4"; mode = [ "BS" "CS" ]; device = "/dev/px4video0"; }
+  { driver = "px4"; mode = [ "BS" "CS" ]; device = "/dev/px4video1"; }
+  { driver = "px4"; mode = [ "GR" ]; device = "/dev/px4video2"; }
+  { driver = "px4"; mode = [ "GR" ]; device = "/dev/px4video3"; }
+];
+```
+
+上記は PX-W3U4 / PX-W3PE4 などの例です。機種と接続順に合わせて各受信機の
+`device` と `mode` を指定してください。PX-MLT の `/dev/pxmlt5video*`、
+`/dev/pxmlt8video*`、e-Better の `/dev/isdb2056video*`、`/dev/isdb6014video*`、
+`/dev/isdbt2071video*`、PX-M1UR の `/dev/pxm1urvideo*`、PX-S1UR の
+`/dev/pxs1urvideo*` も同じ `driver = "px4"` で扱います。
+Mirakurun と Hirakud の受信コマンドは共通の recisdb 経路です。
+内蔵カードリーダーには別途 PC/SC プラグインが必要です。外付けリーダーは既存の
+`dtv.card` 設定を使えます。PX-M1UR / DTV02(A)-1T1S-U の CATV 受信には
+[上流記載の recisdb の選局制限](https://github.com/tsukumijima/px4_drv#対応デバイス)があります。
+
 ## A865R
 
 A865R は標準 DVB frontend として登録され、recisdb で録画します。Nix が固定ハッシュの

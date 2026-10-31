@@ -21,6 +21,7 @@ let
             p:
             builtins.elem (lib.getName p) [
               "pcsc-rw5100"
+              "px4-drv"
             ];
         }
         module
@@ -40,6 +41,83 @@ let
       mkdir -p $out/bin
       touch $out/bin/${name}
     '';
+
+  px4Devices = map (family: "/dev/${family}video0") [
+    "px4"
+    "pxmlt5"
+    "pxmlt8"
+    "isdb2056"
+    "isdb6014"
+    "pxm1ur"
+    "pxs1ur"
+    "isdbt2071"
+  ];
+  px4Inventory = map (device: {
+    driver = "px4";
+    mode = [ "GR" ];
+    inherit device;
+  }) px4Devices;
+  px4Tuners = configOf {
+    hardware.firmwareCompression = "none";
+    dtv.mirakurun.enable = true;
+    dtv.tuners = px4Inventory;
+  };
+  px4Hardware = configOf {
+    dtv.tuners = [
+      {
+        driver = "px4";
+        mode = [ ];
+      }
+    ];
+  };
+  px4Disabled = configOf {
+    dtv.mirakurun.enable = true;
+    dtv.tuners = [
+      {
+        driver = "px4";
+        enable = false;
+        mode = [ ];
+      }
+    ];
+  };
+  px4CustomKernel = configOf {
+    boot.kernelPackages = linuxPkgs.linuxPackages_latest;
+    dtv.tuners = [
+      {
+        driver = "px4";
+        mode = [ ];
+      }
+    ];
+  };
+  px4Contract =
+    let
+      driver = builtins.head px4Tuners.boot.extraModulePackages;
+      custom = builtins.head px4CustomKernel.boot.extraModulePackages;
+    in
+    builtins.length px4Tuners.boot.extraModulePackages == 1
+    && driver.src == linuxPkgs.px4-drv.src
+    && driver.version == linuxPkgs.px4-drv.version
+    && builtins.any (
+      flag:
+      lib.hasInfix (builtins.unsafeDiscardStringContext (toString px4Tuners.boot.kernelPackages.kernel.dev)) flag
+    ) driver.makeFlags
+    && builtins.elem "px4_drv" px4Tuners.boot.kernelModules
+    && builtins.elem driver px4Tuners.hardware.firmware.paths
+    && builtins.elem driver px4Tuners.services.udev.packages
+    && map (t: t.checkDevicePath) px4Tuners.services.mirakurun.tunerSettings == px4Devices
+    && px4Tuners.systemd.services.mirakurun.serviceConfig.Group == "video"
+    && builtins.elem (builtins.head px4Hardware.boot.extraModulePackages) px4Hardware.services.udev.packages
+    && !hasService px4Hardware "mirakurun"
+    && px4Disabled.boot.extraModulePackages == [ ]
+    && px4Disabled.services.mirakurun.tunerSettings == [ ]
+    && !(builtins.elem "px4_drv" px4Disabled.boot.kernelModules)
+    && !hasNamedPackage "px4-drv" px4Disabled.services.udev.packages
+    && !hasNamedPackage "px4-drv" px4Disabled.hardware.firmware.paths
+    && builtins.any (
+      flag:
+      lib.hasInfix (builtins.unsafeDiscardStringContext (toString px4CustomKernel.boot.kernelPackages.kernel.dev)) flag
+    ) custom.makeFlags
+    && custom.src == driver.src;
 
   hirakudOnly = configOf {
     dtv.hirakud.enable = true;
@@ -591,7 +669,8 @@ let
           "15v"
         ];
       }
-    ];
+    ]
+    ++ px4Inventory;
   };
   dvbCaptureRecorder = pkgs.writeShellScriptBin "recisdb" ''
     printf '%s\n' "$@"
@@ -842,6 +921,7 @@ let
     && require "mirakurun-only role" mirakurunOnlyContract
     && require "compact PT3 cards" compactPt3Contract
     && require "explicit PT3 tuner" explicitPt3Contract
+    && require "PX4 device families and kernel ownership" px4Contract
     && require "unnamed PT3 tuners" unnamedPt3Contract
     && require "hardware-only tuner" hardwareOnlyContract
     && require "A865R DVB tuner" a865rTunerContract
@@ -879,6 +959,14 @@ in
       touch $out
     '';
   recisdb-capture = pkgs.runCommand "recisdb-capture" { } ''
+    ${lib.concatMapStringsSep "\n"
+      (t: ''
+        test "$(${
+          lib.replaceStrings [ "<channel>" ] [ "13" ] t.command
+        })" = "$(printf '%s\n' tune --channel T13 --device ${lib.escapeShellArg t.checkDevicePath} -)"
+      '')
+      (builtins.filter (t: lib.hasPrefix "PX4-T" t.name) captureConfig.services.mirakurun.tunerSettings)
+    }
     test "$(${runCapture "PT4K" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/dvb/adapter0/frontend0 --lnb 15v -)"
     test "$(${runCapture "PT4K4K" "BS17_0"})" = "$(printf '%s\n' tune --channel BS17_0 --device /dev/dvb/adapter0/frontend0 --lnb 15v --b61 --cas-proxy 192.0.2.10:24001 -)"
     test "$(${runCapture "PT3-T1" "13"})" = "$(printf '%s\n' tune --channel T13 --device /dev/pt3video2 -)"

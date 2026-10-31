@@ -32,6 +32,7 @@ in
   pcsc-rw5100 = callPackage ./pcsc-rw5100/package.nix { };
   psisiarc = callPackage ./psisiarc/package.nix { };
   psisimux = callPackage ./psisimux/package.nix { };
+  px4-drv = callPackage ./px4-drv/package.nix { };
   qsvencc = callPackage ./qsvencc/package.nix { };
   recisdb = callPackage ./recisdb/package.nix { };
   tsreadex = callPackage ./tsreadex/package.nix { };

@@ -76,9 +76,9 @@ storage or host-specific module parameters. Compact PT3 entries provide default
 device numbering, and PX4 entries include the driver's bundled firmware.
 Other required firmware and device-specific settings remain the consumer's responsibility.
 PT3, upstream PX4, Siano, TBS6812 and A865R drivers are included. The experimental
-PX4 PC/SC plugin is not packaged; external readers remain separate packages. Kernel-driver derivations
-remain private to the module interface rather than exporting binaries tied to
-a different kernel.
+PX4 PC/SC plugin is not packaged; external readers remain separate packages. `px4-drv` is also exported for the default Nixpkgs kernel; the DTV module
+builds the same definition against the consumer's kernel. Other kernel-driver
+derivations remain private to the module interface.
 
 `packages.x86_64-linux` exposes the full package set. The aarch64-linux output
 omits the five architecture-specific bundles/encoders listed below. The aarch64-darwin output contains Hiraku, libaribb61, libaribtlv, PSI/SI tools,
@@ -287,6 +287,35 @@ two GR and two BS/CS inputs. Further compact PT3 cards continue with T3/T4/S3/S4
 the device offset automatically. Explicit `name` and `deviceOffset`
 override those defaults. Supplying `mode` creates one entry without expansion;
 `mode = []` registers only hardware. Other drivers require explicit `mode`.
+
+## PX4 / PX-MLT / e-Better
+
+[`tsukumijima/px4_drv`](https://github.com/tsukumijima/px4_drv) v0.7.0 is
+available as `px4-drv`. Nix builds the module for the selected kernel without DKMS: `nix build .#px4-drv` targets the default Nixpkgs kernel.
+The DTV module builds the same package against `boot.kernelPackages` and
+installs the bundled firmware and udev rules for all supported device families.
+Allow the unfree `px4-drv` package in your Nixpkgs policy.
+
+```nix
+dtv.mirakurun.enable = true;
+dtv.tuners = [
+  { driver = "px4"; mode = [ "BS" "CS" ]; device = "/dev/px4video0"; }
+  { driver = "px4"; mode = [ "BS" "CS" ]; device = "/dev/px4video1"; }
+  { driver = "px4"; mode = [ "GR" ]; device = "/dev/px4video2"; }
+  { driver = "px4"; mode = [ "GR" ]; device = "/dev/px4video3"; }
+];
+```
+
+This example fits models such as PX-W3U4 / PX-W3PE4. Specify each receiver's
+actual `device` and supported `mode` for your model and connection order.
+Use the same `driver = "px4"` for PX-MLT (`/dev/pxmlt5video*`,
+`/dev/pxmlt8video*`), e-Better (`/dev/isdb2056video*`, `/dev/isdb6014video*`,
+`/dev/isdbt2071video*`), PX-M1UR (`/dev/pxm1urvideo*`) and
+PX-S1UR (`/dev/pxs1urvideo*`). Mirakurun and Hirakud share the recisdb capture
+path. Built-in card readers require a separate PC/SC plugin; external readers
+use the existing `dtv.card` configuration. Consult the
+[upstream recisdb tuning limitation](https://github.com/tsukumijima/px4_drv#対応デバイス)
+for CATV reception with PX-M1UR / DTV02(A)-1T1S-U.
 
 ## A865R
 

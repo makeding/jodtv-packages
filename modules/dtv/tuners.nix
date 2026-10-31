@@ -573,6 +573,7 @@ in
       boot.extraModulePackages = map (name: driverPackages.${name}) selectedDrivers;
       boot.kernelModules = lib.unique (lib.concatMap (name: drivers.${name}.modules) selectedDrivers);
       boot.blacklistedKernelModules = lib.optional (builtins.elem "pt3" selectedDrivers) "earth_pt3";
+      services.udev.packages = lib.optional (builtins.elem "px4" selectedDrivers) driverPackages.px4;
       hardware.firmware =
         lib.optional (builtins.elem "px4" selectedDrivers) driverPackages.px4
         ++ lib.optional (a865rSelected && cfg.a865r.firmware != null) (
@@ -603,7 +604,6 @@ in
       services.udev.extraRules = ''
         SUBSYSTEM=="ptx", GROUP="video", MODE="0660"
         KERNEL=="pt3video*", GROUP="video", MODE="0660"
-        KERNEL=="px4video*", GROUP="video", MODE="0660"
         SUBSYSTEM=="dvb", GROUP="video", MODE="0660"
       '';
     })

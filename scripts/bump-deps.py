@@ -21,7 +21,7 @@ SUBPACKAGES = {"honomitv": "frontend", "konomitv": "frontend",
                "amatsukaze": "sourceBuild", "nvencc": "sourceBuild"}
 ALIASES = {"epgstation": "epgstation-h"}
 # The firmware pin also has an independently verified extracted SYS checksum.
-EXCLUDED = {"a865r-firmware", "ffmpeg-libaribtlv", "edcb-wine"}
+EXCLUDED = {"a865r-firmware", "ffmpeg-libaribtlv", "edcb-wine", "px4-drv"}
 MANIFESTS = {
     "epgstation-h": ("package.json", "json"),
     "epgstation-upstream": ("package.json", "json"),
