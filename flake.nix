@@ -69,7 +69,6 @@
             "ffmpeg-libaribtlv"
           ];
           x86Only = [
-            "amatsukaze"
             "edcb-wine"
             "intel-media-sdk-h"
             "qsvencc"
@@ -93,14 +92,12 @@
         default = {
           imports = with self.nixosModules; [
             packages
-            amatsukaze
             dtv
             edcb-wine
             honomitv
           ];
         };
         edcb-wine = ./modules/edcb-wine;
-        amatsukaze = ./modules/amatsukaze.nix;
         casproxyserver = ./modules/casproxyserver.nix;
         hirakud = ./modules/hirakud.nix;
         honomitv = ./modules/honomitv;

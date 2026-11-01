@@ -37,7 +37,6 @@ in
             };
             amatsukaze = prev.amatsukaze.override {
               inherit ffmpeg;
-              bs4k = true;
             };
             honomitv = prev.honomitv.override { ffmpeg-headless = ffmpeg; };
             konomitv = prev.konomitv.override { ffmpeg-headless = ffmpeg; };

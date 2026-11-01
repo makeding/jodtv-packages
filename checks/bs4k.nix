@@ -137,12 +137,11 @@ in
     assert !(builtins.all (a: a.assertion) forbidden.config.assertions);
     assert normal.pkgs.tsreplace.drvPath == disabled.pkgs.tsreplace.drvPath;
     assert !normal.pkgs.nvencc.fromSource;
-    assert !normal.pkgs.amatsukaze.bs4k;
     assert hasInput normal.pkgs.tsreplace normal.pkgs.ffmpeg;
     assert hasInput normal.pkgs.qsvencc normal.pkgs.ffmpeg;
     assert hasInput normal.pkgs.honomitv normal.pkgs.ffmpeg-headless;
     assert hasInput normal.pkgs.konomitv normal.pkgs.ffmpeg-headless;
-    assert normal.pkgs.amatsukaze.sourceBuild.ffmpeg.drvPath == normal.pkgs.ffmpeg.drvPath;
+    assert normal.pkgs.amatsukaze.ffmpeg.drvPath == normal.pkgs.ffmpeg.drvPath;
     assert builtins.all (name: !(hasReference normal.pkgs.${name}.postPatch ffmpeg)) [
       "honomitv"
       "konomitv"
@@ -156,12 +155,7 @@ in
     assert hasInput selected.qsvencc ffmpeg;
     assert selected.nvencc.fromSource;
     assert hasInput selected.nvencc ffmpeg;
-    assert selected.amatsukaze.bs4k;
-    assert hasInput selected.amatsukaze.sourceBuild ffmpeg;
-    assert builtins.elem (lib.getDev ffmpeg).outPath (
-      map (p: p.outPath) selected.amatsukaze.mp4box.nativeBuildInputs
-    );
-    assert selected.amatsukaze.tsreplace.drvPath == selected.tsreplace.drvPath;
+    assert hasInput selected.amatsukaze ffmpeg;
     assert builtins.all
       (
         name:
@@ -186,7 +180,6 @@ in
         qsvencc = null;
         nvencc = null;
       }).drvPath;
-    assert manual.config.services.amatsukaze.package.drvPath == selected.amatsukaze.drvPath;
     pkgs.runCommand "bs4k-dependency-selection" { } "touch $out";
 }
 // lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "x86_64-linux") {
@@ -195,11 +188,10 @@ in
       ''
         for binary in ${selected.qsvencc}/bin/qsvencc \
           ${selected.nvencc}/bin/.nvencc-wrapped \
-          ${selected.amatsukaze.sourceBuild}/lib/libAmatsukaze.so; do
+          ${selected.amatsukaze}/lib/libAmatsukaze.so; do
           patchelf --print-needed "$binary" | grep -q 'libavformat.so'
           patchelf --print-rpath "$binary" | grep -Fq '${lib.getLib ffmpeg}/lib'
         done
-        test -s ${selected.amatsukaze}/share/amatsukaze/exe_files/MP4Box
         touch "$out"
       '';
 }

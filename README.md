@@ -48,7 +48,7 @@ PT3、上流版 PX4、Siano、TBS6812、A865R のドライバーを含みます�
 ビルドしたバイナリを公開パッケージとして提供することはありません。
 
 `packages.x86_64-linux` はすべてのパッケージを公開します。`aarch64-linux` では
-以下のアーキテクチャ固有の 5 パッケージを除外しています。`aarch64-darwin` では Hiraku、libaribb61、libaribtlv、
+以下のアーキテクチャ固有の 4 パッケージを除外しています。`aarch64-darwin` では Hiraku、libaribb61、libaribtlv、
 PSI/SI ツール、mmt2ts、tsreadex、tsreplace、FFmpeg パッチセットを公開します。
 ソースの取得を伴うパッケージが無関係なツールの評価まで要求しないよう、公開する一覧を
 明示しています。出力が存在することは、そのプラットフォームでビルド済みであることを
@@ -63,7 +63,7 @@ CI は Linux の両出力を同一リビジョンで、ネイティブ runner
 両アーキテクチャの依存関係と出力を保護します。
 
 ARM Linux の HonomiTV/KonomiTV は FFmpeg を使い、同梱 QSVEncC/NVEncC は対象外です。
-除外する 5 パッケージは `amatsukaze`（x64 バンドル・エンジン）、`edcb-wine`
+除外する 4 パッケージは `edcb-wine`
 （Windows x64/Wine）、`intel-media-sdk-h` と `qsvencc`（Intel 向け）、
 `nvencc`（amd64 バンドル・x86 CUDA 設定）です。
 CI のビルド成功はチューナー、カードリーダー、GPU の実機動作を保証しません。
@@ -340,32 +340,19 @@ FFmpeg は PATH の変更だけでは置き換わりません。BS4K がなけ�
 
 ## Amatsukaze と NVEncC
 
-x86_64 Linux で `amatsukaze` と `nvencc` の unfree パッケージを許可して実行します。
+`amatsukaze` は x86_64 / aarch64 Linux 向けにソースからビルドする
+`AmatsukazeCLI`、`AmatsukazeGenLogo` と共有ライブラリーです。
 
 ```sh
-nix run .#amatsukaze
-nix run .#amatsukaze -- add-task -f /recordings/input.ts
-nix run .#amatsukaze -- cli --help
+nix run .#amatsukaze -- --help
+nix build .#amatsukaze
 nix run .#nvencc -- --help
 ```
 
-WebUI は既定で `http://localhost:32769/`、状態は
-`${XDG_DATA_HOME:-$HOME/.local/share}/amatsukaze` に保存します。
-`--state-dir` または `AMATSUKAZE_STATE_DIR` で変更できます。
-更新時も設定、プロファイル、キュー、履歴を保持します。AviSynth、フィルターと
-ソフトウェアエンコーダーを同梱しています。NVEncC は独立したパッケージで、
-Linux の KonomiTV/HonomiTV にも組み込みます。ソフトウェア処理だけの Amatsukaze
-には不要です。NVIDIA エンコードにはホスト側の動作する NVIDIA ドライバーが必要です。
-
-default モジュールに含まれる任意のサービス:
-
-```nix
-services.amatsukaze = {
-  enable = true;
-  mediaDirectories = [ "/srv/recordings" "/srv/encoded" ];
-  # openFirewall = true; # サーバー 32768、WebUI 32769
-};
-```
+Amatsukaze の配布バイナリー、サーバー、WebUI とその NixOS サービスは含みません。
+`dtv.bs4k = true` では同じパッケージを選択済みの FFmpeg にリンクします。
+NVEncC は独立した x86_64 Linux 向けパッケージで、unfree の許可と
+ホスト側の NVIDIA ドライバーが必要です。
 
 ## EDCB on Wine
 

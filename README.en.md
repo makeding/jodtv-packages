@@ -81,7 +81,7 @@ builds the same definition against the consumer's kernel. Other kernel-driver
 derivations remain private to the module interface.
 
 `packages.x86_64-linux` exposes the full package set. The aarch64-linux output
-omits the five architecture-specific bundles/encoders listed below. The aarch64-darwin output contains Hiraku, libaribb61, libaribtlv, PSI/SI tools,
+omits the four architecture-specific bundles/encoders listed below. The aarch64-darwin output contains Hiraku, libaribb61, libaribtlv, PSI/SI tools,
 mmt2ts, tsreadex, tsreplace and the FFmpeg patchset. Output lists are explicit to keep
 source-dependent packages from forcing evaluation of unrelated tools.
 An output's presence is not a claim that it was built on that platform. HonomiTV and the FFmpeg patchset require source-dependent evaluation;
@@ -95,8 +95,7 @@ after both architectures succeed and protects both architectures for the current
 and previous retained revisions.
 
 ARM Linux includes HonomiTV/KonomiTV with FFmpeg; the bundled QSVEncC/NVEncC
-encoders are unavailable there. The five excluded packages are `amatsukaze`
-(x64 bundle/native engine), `edcb-wine` (Windows x64/Wine), `intel-media-sdk-h`
+encoders are unavailable there. The four excluded packages are `edcb-wine` (Windows x64/Wine), `intel-media-sdk-h`
 and `qsvencc` (Intel stack), and `nvencc` (amd64 bundle and x86 CUDA source setup).
 CI build success does not verify tuner, smart-card or GPU operation.
 
@@ -155,33 +154,19 @@ Source builds need a Linux builder; NVEncC additionally uses CUDA redistributabl
 
 ## Amatsukaze and NVEncC
 
-On x86_64 Linux, permit the `amatsukaze` and `nvencc` bundles in your Nixpkgs
-unfree policy, then run:
+`amatsukaze` builds `AmatsukazeCLI`, `AmatsukazeGenLogo` and their shared
+libraries from source on x86_64 and aarch64 Linux.
 
 ```sh
-nix run .#amatsukaze
-nix run .#amatsukaze -- add-task -f /recordings/input.ts
-nix run .#amatsukaze -- cli --help
+nix run .#amatsukaze -- --help
+nix build .#amatsukaze
 nix run .#nvencc -- --help
 ```
 
-Amatsukaze's WebUI defaults to `http://localhost:32769/`. State lives in
-`${XDG_DATA_HOME:-$HOME/.local/share}/amatsukaze`; `--state-dir` or
-`AMATSUKAZE_STATE_DIR` changes it. Nix upgrades preserve configuration, profiles,
-queue and history. The bundle includes AviSynth, filters and software encoders.
-NVEncC is available independently and is included in Linux KonomiTV/HonomiTV;
-software-only Amatsukaze does not require it. NVIDIA encoding requires the host's
-working NVIDIA driver.
-
-The default module includes the optional `services.amatsukaze` service:
-
-```nix
-services.amatsukaze = {
-  enable = true;
-  mediaDirectories = [ "/srv/recordings" "/srv/encoded" ];
-  # openFirewall = true; # server port 32768 and WebUI port 32769
-};
-```
+The upstream binary bundle, server, WebUI and its NixOS service are not included.
+`dtv.bs4k = true` links the same package against the selected FFmpeg.
+NVEncC remains an independent x86_64 Linux package requiring unfree permission
+and the host's working NVIDIA driver.
 
 ## EDCB under Wine
 

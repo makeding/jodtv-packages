@@ -1,43 +1,31 @@
 {
   lib,
-  stdenvNoCC,
-  fetchurl,
-  autoPatchelfHook,
-  makeWrapper,
+  stdenv,
+  meson,
+  ninja,
+  pkg-config,
   python3,
+  ffmpeg,
+  avisynthplus,
+  libjpeg_turbo,
+  libaribcaption,
   fontconfig,
   noto-fonts-cjk-sans,
   writeText,
-  addDriverRunpath,
   zlib,
-  krb5,
-  glibc,
-  runtimeShell,
-  callPackage,
   fetchFromGitHub,
-  ffmpeg,
-  bs4k ? false,
-  tsreplace,
-  gpac,
 }:
 let
   version = "1.1.1.4";
-  sourceBuild = callPackage ./native.nix {
-    inherit version ffmpeg;
-    src = fetchFromGitHub {
-      owner = "rigaya";
-      repo = "Amatsukaze";
-      # Use the merged aarch64 fix for 1.1.1.4; later releases use their own tag.
-      rev = if version == "1.1.1.4" then "7bf52b86f746a8ee68d158a35a63bb818cdc6173" else version;
-      hash = "sha256-1Jy1YZowlBylhLkUegJ24GFH5WvKPfRuH7Oadu7rSSU=";
-      fetchSubmodules = true;
-    };
+  src = fetchFromGitHub {
+    owner = "rigaya";
+    repo = "Amatsukaze";
+    # Use the merged aarch64 fix for 1.1.1.4; later releases use their own tag.
+    rev = if version == "1.1.1.4" then "7bf52b86f746a8ee68d158a35a63bb818cdc6173" else version;
+    hash = "sha256-1Jy1YZowlBylhLkUegJ24GFH5WvKPfRuH7Oadu7rSSU=";
+    fetchSubmodules = true;
   };
-  mp4box = gpac.override {
-    ffmpeg-headless = ffmpeg;
-    withFfmpeg = true;
-  };
-  fonts = writeText "amatsukaze-fonts.conf" ''
+  testFontConfig = writeText "amatsukaze-fonts.conf" ''
     <?xml version="1.0"?>
     <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
     <fontconfig>
@@ -46,101 +34,94 @@ let
     </fontconfig>
   '';
 in
-stdenvNoCC.mkDerivation (finalAttrs: {
+stdenv.mkDerivation {
   pname = "amatsukaze";
-  inherit version;
-
-  src = fetchurl {
-    url = "https://github.com/rigaya/Amatsukaze/releases/download/${finalAttrs.version}/Amatsukaze_linux_${finalAttrs.version}_x64.tar.xz";
-    hash = "sha256-59mPSwieljVVnK3Njw/owlJZ6LDMANfb/c+G96+RzkI=";
-  };
-
+  inherit version src;
   nativeBuildInputs = [
-    autoPatchelfHook
-    makeWrapper
+    meson
+    ninja
+    pkg-config
+    python3
   ];
-  sourceRoot = ".";
-  dontConfigure = true;
-  dontBuild = true;
-  # Preserve bundled runtime binaries and their embedded .NET assemblies.
-  dontStrip = true;
-  dontPatchShebangs = true;
-  # .NET single-file hosts have embedded payload offsets and non-contiguous
-  # NOTE sections. Keep their bytes intact and invoke them via the Nix loader.
-  dontAutoPatchelf = true;
-
-  installPhase = ''
-    runHook preInstall
-    mkdir -p "$out/share/amatsukaze" "$out/bin"
-    cp -a exe_files avs avscache bat profile JL logo drcs scripts \
-      basepkg-manifest.json "$out/share/amatsukaze/"
-    mkdir dotnet-unpatched
-    for program in AmatsukazeServerCLI AmatsukazeAddTask ScriptCommand AmatsukazeDockerConfigFix; do
-      mv "$out/share/amatsukaze/exe_files/$program" dotnet-unpatched/
-    done
-    # The archive carries every non-glibc ELF dependency, including ICU and
-    # AviSynth. Keep those versions together with the self-contained runtime.
-    addAutoPatchelfSearchPath "$out/share/amatsukaze/exe_files"
-    makeWrapper ${python3}/bin/python "$out/bin/amatsukaze" \
-      --add-flags "${./run.py} --bundle $out/share/amatsukaze" \
-      --prefix PATH : ${lib.makeBinPath [ python3 ]} \
-      --set FONTCONFIG_FILE ${fonts} \
-      --set AMT_ENABLE_SELF_UPDATE 0 \
-      --set DOTNET_SYSTEM_GLOBALIZATION_APPLOCALICU 76.1 \
-      --prefix LD_LIBRARY_PATH : "$out/share/amatsukaze/exe_files/lib:${
-        lib.makeLibraryPath [
-          zlib
-          krb5
-        ]
-      }:${addDriverRunpath.driverLink}/lib" \
-      --set OPENSSL_MODULES "$out/share/amatsukaze/exe_files/lib/ossl-modules"
-    makeWrapper "$out/bin/amatsukaze" "$out/bin/amatsukaze-cli" --add-flags cli
-    makeWrapper "$out/bin/amatsukaze" "$out/bin/amatsukaze-add-task" --add-flags add-task
-    runHook postInstall
+  buildInputs = [
+    ffmpeg
+    avisynthplus
+    libjpeg_turbo
+    libaribcaption
+    fontconfig
+    zlib
+  ];
+  postPatch = ''
+    python - <<'PY'
+    from pathlib import Path
+    path = Path('meson.build')
+    text = path.read_text()
+    # Generated headers live in Meson's build root; upstream targets use cpp_args.
+    text = text.replace("cpp_args = []", "cpp_args = ['-I' + meson.current_build_dir()]", 1)
+    start = text.index("git = find_program('git')")
+    end = text.index('# Version.h', start)
+    # Archive builds have no Git metadata. The package owns the release version.
+    text = text[:start] + "version_h = configure_file(input: 'Version.h.in', output: 'Version.h', copy: true)\n" + text[end:]
+    # Keep one dynamically linked copy of font/rendering dependencies in the
+    # process rather than embedding a second C++/FFmpeg dependency closure.
+    start = text.index("aribcaption_pkg_dep =")
+    end = text.index('# glibc', start)
+    text = text[:start] + "aribcaption_dep = declare_dependency(dependencies: [\n  dependency('libaribcaption', required: true),\n  dependency('fontconfig', required: true),\n])\n\n" + text[end:]
+    text = text.replace("dependency('zlib', required : true, static : true)", "dependency('zlib', required : true)")
+    path.write_text(text)
+    # FFmpeg 9 removed the legacy FF_PROFILE_* aliases; keep the pinned
+    # upstream source compatible with current libavcodec headers.
+    source = Path('Amatsukaze/AudioTrackConverter.cpp')
+    source_text = source.read_text()
+    source.write_text(source_text.replace('FF_PROFILE_AAC_LOW', 'AV_PROFILE_AAC_LOW'))
+    Path('Version.h.in').write_text('#define AMATSUKAZE_VERSION "${version}"\n#define AMATSUKAZE_PRODUCTVERSION ${
+      lib.replaceStrings [ "." ] [ "," ] version
+    }\n')
+    PY
   '';
-
-  postFixup = ''
-    autoPatchelf "$out"
-    for program in AmatsukazeServerCLI AmatsukazeAddTask ScriptCommand AmatsukazeDockerConfigFix; do
-      install -m755 "dotnet-unpatched/$program" "$out/share/amatsukaze/exe_files/.$program-unwrapped"
-      substitute ${./dotnet-host.sh} "$out/share/amatsukaze/exe_files/$program" \
-        --subst-var-by shell ${runtimeShell} \
-        --subst-var-by loader ${glibc}/lib/ld-linux-x86-64.so.2 \
-        --subst-var-by glibc ${glibc}
-      chmod +x "$out/share/amatsukaze/exe_files/$program"
-    done
-  ''
-  + lib.optionalString bs4k ''
-    # Replace every bundled libav consumer, including the --loadv2 engine.
-    rm "$out/share/amatsukaze/exe_files/"{libAmatsukaze.so,libAmatsukaze2.so,AmatsukazeCLI,AmatsukazeGenLogo,tsreplace,MP4Box}
+  doCheck = true;
+  preCheck = ''
+    export FONTCONFIG_FILE=${testFontConfig}
+    export XDG_CACHE_HOME="$TMPDIR/fontconfig-cache"
+    mkdir -p "$XDG_CACHE_HOME"
+  '';
+  postInstall = ''
+    # --loadv2 chooses this filename; both paths must use the selected libav.
+    ln -s libAmatsukaze.so "$out/lib/libAmatsukaze2.so"
+    # The CLI and logo tool dlopen beside their executable, not from lib/.
     for library in libAmatsukaze.so libAmatsukaze2.so; do
-      ln -s ${sourceBuild}/lib/$library "$out/share/amatsukaze/exe_files/$library"
+      ln -s ../lib/$library "$out/bin/$library"
     done
-    for program in AmatsukazeCLI AmatsukazeGenLogo; do
-      cp ${sourceBuild}/bin/$program "$out/share/amatsukaze/exe_files/$program"
-    done
-    ln -s ${tsreplace}/bin/tsreplace "$out/share/amatsukaze/exe_files/tsreplace"
-    ln -s ${mp4box}/bin/MP4Box "$out/share/amatsukaze/exe_files/MP4Box"
-    rm "$out/share/amatsukaze/exe_files/lib/"{libstdc++.so.6,libgcc_s.so.1}
-    ln -s ${sourceBuild.compilerRuntime}/lib/libstdc++.so.6 "$out/share/amatsukaze/exe_files/lib/libstdc++.so.6"
-    ln -s ${sourceBuild.compilerRuntime}/lib/libgcc_s.so.1 "$out/share/amatsukaze/exe_files/lib/libgcc_s.so.1"
   '';
-
+  doInstallCheck = true;
+  installCheckPhase = ''
+    runHook preInstallCheck
+    # No input prints usage and exits 1. This still loads the selected library
+    # and resolves its exported CLI symbol through the actual installed path.
+    for mode in default v2; do
+      args=()
+      if [ "$mode" = v2 ]; then args+=(--loadv2); fi
+      status=0
+      "$out/bin/AmatsukazeCLI" "''${args[@]}" > "$mode.log" 2>&1 || status=$?
+      cat "$mode.log"
+      test "$status" = 1
+      grep -q -- '--input' "$mode.log"
+    done
+    runHook postInstallCheck
+  '';
   passthru = {
-    inherit sourceBuild bs4k;
-  }
-  // lib.optionalAttrs bs4k {
-    inherit mp4box tsreplace;
+    inherit ffmpeg;
+    compilerRuntime = stdenv.cc.cc.lib;
   };
-
   meta = {
-    description = "Automated MPEG-TS transcoder with CM analysis, subtitles and WebUI";
+    description = "Amatsukaze native engines rebuilt against the selected FFmpeg";
     homepage = "https://github.com/rigaya/Amatsukaze";
-    # Mixed upstream binary bundle; retain its individual component licenses.
-    license = lib.licenses.unfree;
-    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
-    platforms = [ "x86_64-linux" ];
-    mainProgram = "amatsukaze";
+    license = lib.licenses.gpl2Plus;
+    platforms = [
+      "x86_64-linux"
+      "aarch64-linux"
+    ];
+    mainProgram = "AmatsukazeCLI";
     maintainers = [ lib.maintainers.huggy ];
   };
-})
+}

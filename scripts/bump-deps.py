@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RELEASES = {"mirakc", "mirakc-arib", "mmt2ts", "intel-media-sdk-h", "qsvencc", "psisimux", "tsreadex", "amatsukaze", "nvencc"}
 SUBPACKAGES = {"honomitv": "frontend", "konomitv": "frontend",
                "epgstation-h": "clientDir", "epgstation-upstream": "clientDir",
-               "amatsukaze": "sourceBuild", "nvencc": "sourceBuild"}
+               "nvencc": "sourceBuild"}
 ALIASES = {"epgstation": "epgstation-h"}
 # The firmware pin also has an independently verified extracted SYS checksum.
 EXCLUDED = {"a865r-firmware", "ffmpeg-libaribtlv", "edcb-wine", "px4-drv"}
