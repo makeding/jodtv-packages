@@ -10,13 +10,13 @@
 
 stdenv.mkDerivation rec {
   pname = "dantto4k";
-  version = "unstable-2026-10-25";
+  version = "unstable-2026-11-01";
 
   src = fetchFromGitHub {
     owner = "nekohkr";
     repo = "dantto4k";
-    rev = "bb425bfe5b987207e984e9e021fa5b04ed168372";
-    hash = "sha256-5wmQ2DwCvbNUpKncHi7V8+upC36SYbCgPKykIpVTm20=";
+    rev = "9f0e97f7eed23ac8f1f39cd8408b4767b34fd73a";
+    hash = "sha256-XI3UoWZjAI1yixuLc6oF2DRNeV5FVGU7Ly8vFQyMR3U=";
   };
 
   asioSrc = fetchFromGitHub {
