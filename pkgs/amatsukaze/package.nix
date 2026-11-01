@@ -27,8 +27,9 @@ let
     src = fetchFromGitHub {
       owner = "rigaya";
       repo = "Amatsukaze";
-      rev = version;
-      hash = "sha256-zg8Hczn92jNh8NJUyMw+6h9031fBtBqt63OhyoHr0aI=";
+      # Use the merged aarch64 fix for 1.1.1.4; later releases use their own tag.
+      rev = if version == "1.1.1.4" then "7bf52b86f746a8ee68d158a35a63bb818cdc6173" else version;
+      hash = "sha256-1Jy1YZowlBylhLkUegJ24GFH5WvKPfRuH7Oadu7rSSU=";
       fetchSubmodules = true;
     };
   };

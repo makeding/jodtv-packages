@@ -29,7 +29,6 @@ in
 stdenv.mkDerivation {
   pname = "amatsukaze-native";
   inherit version src;
-  patches = [ ./non-x86-retry-side-stats.patch ];
   nativeBuildInputs = [
     meson
     ninja
