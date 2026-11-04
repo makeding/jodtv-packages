@@ -126,8 +126,12 @@ let
     map (t: t.driver) (builtins.filter (t: builtins.hasAttr t.driver drivers) enabled)
   );
   a865rSelected = builtins.elem "a865r" selectedDrivers;
+  magicvisionSelected = builtins.elem "magicvision" selectedDrivers;
   driverPackages = lib.genAttrs selectedDrivers (
-    name: config.boot.kernelPackages.callPackage drivers.${name}.file { }
+    name:
+    config.boot.kernelPackages.callPackage drivers.${name}.file (
+      lib.optionalAttrs (name == "magicvision") { firmware = cfg.magicvision.firmware; }
+    )
   );
   has4k = t: builtins.elem "BS4K" t.mode;
   mmtsConverters = {
@@ -319,6 +323,14 @@ let
 in
 {
   options.dtv = {
+    magicvision = {
+      firmware = lib.mkPackageOption pkgs "magicvision-firmware" { };
+      ccidControllers = mkOption {
+        type = types.ints.positive;
+        default = lib.max 1 (builtins.length (builtins.filter (t: t.driver == "magicvision") enabled));
+        description = "Number of dummy_hcd controllers reserved for physical mAgicVISION CCID readers.";
+      };
+    };
     a865r.firmware = mkOption {
       type = types.nullOr types.path;
       default = "${pkgs.a865r-firmware}/lib/firmware/a865r/AVer857BDA.sys";
@@ -573,9 +585,12 @@ in
       boot.extraModulePackages = map (name: driverPackages.${name}) selectedDrivers;
       boot.kernelModules = lib.unique (lib.concatMap (name: drivers.${name}.modules) selectedDrivers);
       boot.blacklistedKernelModules = lib.optional (builtins.elem "pt3" selectedDrivers) "earth_pt3";
-      services.udev.packages = lib.optional (builtins.elem "px4" selectedDrivers) driverPackages.px4;
+      services.udev.packages =
+        lib.optional (builtins.elem "px4" selectedDrivers) driverPackages.px4
+        ++ lib.optional magicvisionSelected driverPackages.magicvision;
       hardware.firmware =
         lib.optional (builtins.elem "px4" selectedDrivers) driverPackages.px4
+        ++ lib.optional magicvisionSelected cfg.magicvision.firmware
         ++ lib.optional (a865rSelected && cfg.a865r.firmware != null) (
           pkgs.runCommand "a865r-firmware" { } ''
             source=${lib.escapeShellArg (toString cfg.a865r.firmware)}
@@ -600,6 +615,22 @@ in
         mirakurunTuners = map (t: { inherit (t) name mode; }) sources;
       };
     }
+    (mkIf magicvisionSelected {
+      boot.extraModprobeConfig = ''
+        options dummy_hcd num=${toString cfg.magicvision.ccidControllers}
+      '';
+      nixpkgs.overlays = [
+        (final: prev: {
+          ccid = prev.ccid.overrideAttrs (old: {
+            postInstall = (old.postInstall or "") + ''
+              ${final.buildPackages.python3}/bin/python3 \
+                ${driverPackages.magicvision.src}/linux/ccid_metadata.py --apply \
+                "$out/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist"
+            '';
+          });
+        })
+      ];
+    })
     (mkIf (activeLocals != [ ]) {
       services.udev.extraRules = ''
         SUBSYSTEM=="ptx", GROUP="video", MODE="0660"

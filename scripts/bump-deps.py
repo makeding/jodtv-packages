@@ -20,8 +20,8 @@ SUBPACKAGES = {"honomitv": "frontend", "konomitv": "frontend",
                "epgstation-h": "clientDir", "epgstation-upstream": "clientDir",
                "nvencc": "sourceBuild"}
 ALIASES = {"epgstation": "epgstation-h"}
-# The firmware pin also has an independently verified extracted SYS checksum.
-EXCLUDED = {"a865r-firmware", "ffmpeg-libaribtlv", "edcb-wine", "px4-drv"}
+# A865R has a verified extracted SYS checksum; mAgicVISION pins its public source and FW release together.
+EXCLUDED = {"a865r-firmware", "magicvision", "magicvision-firmware", "ffmpeg-libaribtlv", "edcb-wine", "px4-drv"}
 MANIFESTS = {
     "epgstation-h": ("package.json", "json"),
     "epgstation-upstream": ("package.json", "json"),

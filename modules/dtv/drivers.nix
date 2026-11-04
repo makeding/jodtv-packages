@@ -3,6 +3,14 @@
     file = ../../kernel-modules/a865r.nix;
     modules = [ "a865r" ];
   };
+  magicvision = {
+    file = ../../pkgs/magicvision/package.nix;
+    modules = [
+      "dummy_hcd"
+      "magicvision_ccid"
+      "magicvision_usb"
+    ];
+  };
   pt3 = {
     file = ../../kernel-modules/pt3.nix;
     modules = [ "pt3_drv" ];

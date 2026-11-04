@@ -20,7 +20,7 @@ class BumpTests(unittest.TestCase):
     def test_all_excludes_manually_pinned_sources(self):
         available = bump.packages()
         self.assertTrue(available)
-        self.assertTrue({"a865r-firmware", "edcb-wine", "ffmpeg-libaribtlv"}.isdisjoint(available))
+        self.assertTrue({"a865r-firmware", "magicvision", "magicvision-firmware", "edcb-wine", "ffmpeg-libaribtlv"}.isdisjoint(available))
         with patch.object(bump.subprocess, "run") as run, patch("builtins.print") as output:
             self.assertEqual(bump.main(["--all", "--dry-run"]), 0)
             run.assert_not_called()

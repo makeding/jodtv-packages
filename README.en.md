@@ -73,10 +73,10 @@ upstream service with database password initialization and the external EPG upda
 The tuner module builds drivers against the consuming system's
 `boot.kernelPackages`. It does not choose a kernel, channel map, networking,
 storage or host-specific module parameters. Compact PT3 entries provide default
-device numbering, and PX4 entries include the driver's bundled firmware.
+device numbering; PX4 and mAgicVISION entries include their pinned firmware.
 Other required firmware and device-specific settings remain the consumer's responsibility.
-PT3, upstream PX4, Siano, TBS6812 and A865R drivers are included. The experimental
-PX4 PC/SC plugin is not packaged; external readers remain separate packages. `px4-drv` is also exported for the default Nixpkgs kernel; the DTV module
+PT3, upstream PX4, mAgicVISION, Siano, TBS6812 and A865R drivers are included. The experimental
+PX4 PC/SC plugin is not packaged; external readers remain separate packages. `px4-drv` and `magicvision` are also exported for the default Nixpkgs kernel; the DTV module
 builds the same definition against the consumer's kernel. Other kernel-driver
 derivations remain private to the module interface.
 
@@ -248,7 +248,7 @@ Import `nixosModules.default` (overlay and modules), or import
 and `dtv.channels` once; the module generates the Mirakurun configuration and
 installs the tools and local drivers selected by each tuner.
 
-Local tuner drivers are `a865r`, `pt3`, `px4`, `siano`, `tbs6812` and generic `dvb`.
+Local tuner drivers are `a865r`, `magicvision`, `pt3`, `px4`, `siano`, `tbs6812` and generic `dvb`.
 Use `mode = []` for a hardware-only declaration. Capturing entries specify a
 name (optional), broadcast modes and device. `command` supports an explicit argument list.
 `hiraku` connects to a remote Hiraku agent; `remote` connects to a remote
@@ -272,6 +272,35 @@ two GR and two BS/CS inputs. Further compact PT3 cards continue with T3/T4/S3/S4
 the device offset automatically. Explicit `name` and `deviceOffset`
 override those defaults. Supplying `mode` creates one entry without expansion;
 `mode = []` registers only hardware. Other drivers require explicit `mode`.
+
+## mAgicVISION: XZ, torne and PIX-DT295
+
+`magicvision` builds the [public driver](https://github.com/makeding/mAgicVISION)
+against the consuming `boot.kernelPackages`. `magicvision-firmware` extracts
+only `firmware.bin` from the pinned [v1 firmware release](https://github.com/makeding/mAgicVISION/releases/tag/v1);
+no private firmware source or Debian installation script is used. Allow the
+unfree `magicvision` (which embeds firmware) and `magicvision-firmware` packages
+in your Nixpkgs policy. `nix build .#magicvision` uses the default Nixpkgs kernel.
+
+Each physical device has one frontend; XZ and DT295 switch between GR and BS/CS.
+
+```nix
+dtv.tuners = [
+  { name = "mAgicVISION XZ"; driver = "magicvision"; device = "/dev/dvb/xz0/frontend0"; mode = [ "GR" "BS" "CS" ]; }
+  { name = "mAgicVISION torne"; driver = "magicvision"; device = "/dev/dvb/torne0/frontend0"; mode = [ "GR" ]; }
+  { name = "mAgicVISION DT295"; driver = "magicvision"; device = "/dev/dvb/dt2950/frontend0"; mode = [ "GR" "BS" "CS" ]; }
+];
+dtv.card.enable = true; # Optional PC/SC service for the virtual CCID readers.
+```
+
+The module loads `dummy_hcd`, `magicvision_ccid` and `magicvision_usb`, installs
+upstream numbered DVB aliases, and adds the virtual reader identity to the system
+libccid metadata. `dtv.magicvision.ccidControllers` defaults to the number of
+enabled mAgicVISION entries (three above); increase it if more physical readers
+are connected. `mode = []` registers hardware without creating a capture tuner.
+`dtv.magicvision.firmware` can override the firmware package, which must provide
+`lib/firmware/magicvision/firmware.bin`. The libusb IFD is not installed alongside
+the kernel owner. Installation does not force a USB reset or restart consumers.
 
 ## PX4 / PX-MLT / e-Better
 
@@ -368,7 +397,7 @@ aligned if you change ports or storage paths in the application.
 
 ## recisdb capture contract
 
-All local tuners (PT3/PX4/A865R/TBS6812/Siano/DVB) use
+All local tuners (PT3/PX4/mAgicVISION/A865R/TBS6812/Siano/DVB) use
 `dtv.packages.recisdb`. The public recorder package is recisdb; selecting an
 unpublished package attribute or configuration option fails Nix evaluation.
 Custom `args` and `argsBS4K` must use recisdb options; explicit `command` values

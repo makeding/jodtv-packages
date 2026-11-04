@@ -22,6 +22,8 @@ let
             builtins.elem (lib.getName p) [
               "pcsc-rw5100"
               "px4-drv"
+              "magicvision"
+              "magicvision-firmware"
             ];
         }
         module
@@ -118,6 +120,89 @@ let
       lib.hasInfix (builtins.unsafeDiscardStringContext (toString px4CustomKernel.boot.kernelPackages.kernel.dev)) flag
     ) custom.makeFlags
     && custom.src == driver.src;
+
+  magicvisionInventory =
+    map
+      (model: {
+        name = model;
+        driver = "magicvision";
+        device = "/dev/dvb/${model}0/frontend0";
+        mode =
+          if model == "torne" then
+            [ "GR" ]
+          else
+            [
+              "GR"
+              "BS"
+              "CS"
+            ];
+      })
+      [
+        "xz"
+        "torne"
+        "dt295"
+      ];
+  magicvisionSystem = system {
+    hardware.firmwareCompression = "none";
+    dtv.tuners = magicvisionInventory;
+    dtv.mirakurun.enable = true;
+    dtv.card.enable = true;
+  };
+  magicvisionConfig = magicvisionSystem.config;
+  magicvisionHardware = configOf {
+    dtv.tuners = [
+      {
+        driver = "magicvision";
+        mode = [ ];
+      }
+    ];
+    boot.kernelPackages = linuxPkgs.linuxPackages_latest;
+    dtv.magicvision.firmware = linuxPkgs.emptyDirectory;
+    dtv.magicvision.ccidControllers = 4;
+  };
+  magicvisionDisabled = configOf {
+    dtv.tuners = [
+      {
+        driver = "magicvision";
+        mode = [ ];
+        enable = false;
+      }
+    ];
+  };
+  magicvisionContract =
+    let
+      driver = builtins.head magicvisionConfig.boot.extraModulePackages;
+      custom = builtins.head magicvisionHardware.boot.extraModulePackages;
+    in
+    builtins.length magicvisionConfig.boot.extraModulePackages == 1
+    && driver.src == linuxPkgs.magicvision.src
+    && driver.firmware == magicvisionConfig.dtv.magicvision.firmware
+    && lib.hasInfix (builtins.unsafeDiscardStringContext (toString magicvisionConfig.boot.kernelPackages.kernel.dev)) driver.buildPhase
+    && builtins.all (m: builtins.elem m magicvisionConfig.boot.kernelModules) [
+      "dummy_hcd"
+      "magicvision_ccid"
+      "magicvision_usb"
+    ]
+    && lib.hasInfix "options dummy_hcd num=3" magicvisionConfig.boot.extraModprobeConfig
+    && builtins.elem driver magicvisionConfig.services.udev.packages
+    && builtins.elem driver.firmware magicvisionConfig.hardware.firmware.paths
+    &&
+      map (t: t.checkDevicePath) magicvisionConfig.services.mirakurun.tunerSettings
+      == map (t: t.device) magicvisionInventory
+    &&
+      map (t: t.types) magicvisionConfig.services.mirakurun.tunerSettings
+      == map (t: t.mode) magicvisionInventory
+    && builtins.elem "pcscd.service" magicvisionConfig.systemd.services.mirakurun.after
+    && lib.hasInfix "ccid_metadata.py --apply" magicvisionSystem.pkgs.ccid.postInstall
+    && !magicvisionHardware.services.pcscd.enable
+    && !hasService magicvisionHardware "mirakurun"
+    && lib.hasInfix "options dummy_hcd num=4" magicvisionHardware.boot.extraModprobeConfig
+    && custom.firmware == linuxPkgs.emptyDirectory
+    && lib.hasInfix (builtins.unsafeDiscardStringContext (toString magicvisionHardware.boot.kernelPackages.kernel.dev)) custom.buildPhase
+    && custom.src == driver.src
+    && magicvisionDisabled.boot.extraModulePackages == [ ]
+    && !hasNamedPackage "magicvision" magicvisionDisabled.services.udev.packages
+    && !hasNamedPackage "magicvision-firmware" magicvisionDisabled.hardware.firmware.paths;
 
   hirakudOnly = configOf {
     dtv.hirakud.enable = true;
@@ -670,7 +755,8 @@ let
         ];
       }
     ]
-    ++ px4Inventory;
+    ++ px4Inventory
+    ++ magicvisionInventory;
   };
   dvbCaptureRecorder = pkgs.writeShellScriptBin "recisdb" ''
     printf '%s\n' "$@"
@@ -922,6 +1008,7 @@ let
     && require "compact PT3 cards" compactPt3Contract
     && require "explicit PT3 tuner" explicitPt3Contract
     && require "PX4 device families and kernel ownership" px4Contract
+    && require "mAgicVISION public release and kernel ownership" magicvisionContract
     && require "unnamed PT3 tuners" unnamedPt3Contract
     && require "hardware-only tuner" hardwareOnlyContract
     && require "A865R DVB tuner" a865rTunerContract
@@ -959,6 +1046,9 @@ in
       touch $out
     '';
   recisdb-capture = pkgs.runCommand "recisdb-capture" { } ''
+    test "$(${runCapture "xz" "13"})" = "$(printf '%s\n' tune --channel T13 --device /dev/dvb/xz0/frontend0 -)"
+    test "$(${runCapture "torne" "24"})" = "$(printf '%s\n' tune --channel T24 --device /dev/dvb/torne0/frontend0 -)"
+    test "$(${runCapture "dt295" "BS15_0"})" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/dvb/dt2950/frontend0 -)"
     ${lib.concatMapStringsSep "\n"
       (t: ''
         test "$(${

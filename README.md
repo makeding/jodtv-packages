@@ -39,13 +39,13 @@ Mirakurun は nixpkgs の NixOS モジュールを利用し、EPGStation はそ�
 
 チューナーモジュールは利用先の `boot.kernelPackages` に合わせてドライバーをビルドします。
 カーネル、チャンネル一覧、ネットワーク、ストレージ、ホスト固有のモジュールパラメーターは
-選択しません。PT3 の簡略指定には既定のデバイス番号があり、PX4 にはドライバーに
-同梱されたファームウェアが追加されます。それ以外に必要なファームウェアや機器固有の
+選択しません。PT3 の簡略指定には既定のデバイス番号があり、PX4 と mAgicVISION は
+固定されたファームウェアも登録します。それ以外に必要なファームウェアや機器固有の
 設定は利用側で用意してください。
-PT3、上流版 PX4、Siano、TBS6812、A865R のドライバーを含みます。実験的な PX4 PC/SC
+PT3、上流版 PX4、mAgicVISION、Siano、TBS6812、A865R のドライバーを含みます。実験的な PX4 PC/SC
 プラグインはパッケージ化しておらず、外付けカードリーダーは別パッケージです。
-カーネルドライバーの derivation はモジュール内部で扱い、別のカーネル向けに
-ビルドしたバイナリを公開パッケージとして提供することはありません。
+`px4-drv` と `magicvision` は既定の Nixpkgs カーネル向けにも公開します。
+DTV モジュールでは同じ定義を利用先のカーネルに合わせてビルドします。
 
 `packages.x86_64-linux` はすべてのパッケージを公開します。`aarch64-linux` では
 以下のアーキテクチャ固有の 4 パッケージを除外しています。`aarch64-darwin` では Hiraku、libaribb61、libaribtlv、
@@ -145,7 +145,7 @@ Git リポジトリが公開されていることだけでは、利用許諾に�
 `dtv.tuners` と `dtv.channels` を一度定義すれば、モジュールが Mirakurun の設定を生成し、
 各チューナーに必要なツールとローカルドライバーを追加します。
 
-ローカルチューナーの `driver` は `a865r`、`pt3`、`px4`、`siano`、`tbs6812`、汎用の `dvb` です。
+ローカルチューナーの `driver` は `a865r`、`magicvision`、`pt3`、`px4`、`siano`、`tbs6812`、汎用の `dvb` です。
 `mode = []` はドライバーだけを登録する指定です。受信用の項目には放送方式とデバイスを
 指定し、必要に応じて名前を付けます。`command` ではコマンドを引数のリストで指定できます。
 `hiraku` はリモートの Hiraku エージェント、`remote` はリモートの Mirakurun に接続します。
@@ -172,6 +172,32 @@ Hiraku の `listen` はアプリケーション本来の `address:port` 形式�
 デバイス番号のオフセットも自動で増えます。`name` と `deviceOffset` で既定値を
 変更できます。`mode` を明示した場合は展開せず、単一のチューナーとして扱います。
 `mode = []` はハードウェアの登録のみを行います。PT3 以外では `mode` の明示が必要です。
+
+## mAgicVISION: XZ / torne / PIX-DT295
+
+`magicvision` は [公開ドライバー](https://github.com/makeding/mAgicVISION)を
+利用先の `boot.kernelPackages` 向けにビルドします。`magicvision-firmware` は
+固定ハッシュの [v1 firmware release](https://github.com/makeding/mAgicVISION/releases/tag/v1)
+から `firmware.bin` だけを取り出します。非公開 FW ソースや Debian のインストール
+スクリプトは使いません。FW を含む `magicvision` と `magicvision-firmware` の
+unfree 許可が必要です。`nix build .#magicvision` は既定のカーネル向けです。
+各機器は 1 frontend で、XZ / DT295 は GR と BS/CS を切り替えて使用します。
+
+```nix
+dtv.tuners = [
+  { name = "mAgicVISION XZ"; driver = "magicvision"; device = "/dev/dvb/xz0/frontend0"; mode = [ "GR" "BS" "CS" ]; }
+  { name = "mAgicVISION torne"; driver = "magicvision"; device = "/dev/dvb/torne0/frontend0"; mode = [ "GR" ]; }
+  { name = "mAgicVISION DT295"; driver = "magicvision"; device = "/dev/dvb/dt2950/frontend0"; mode = [ "GR" "BS" "CS" ]; }
+];
+dtv.card.enable = true; # 仮想 CCID reader 用 PC/SC サービス（任意）
+```
+
+`dummy_hcd` / `magicvision_ccid` / `magicvision_usb` と公開 udev ルールを登録し、
+libccid の metadata に仮想 reader を追加します。`dtv.magicvision.ccidControllers`
+の既定値は有効な項目数（上記は 3）です。実際の接続 reader が多い場合は増やしてください。
+`mode = []` はハードウェアのみを登録します。`dtv.magicvision.firmware` では
+`lib/firmware/magicvision/firmware.bin` を提供する別のパッケージを指定できます。
+カーネル経路と競合する libusb IFD は追加せず、USB reset やサービス再起動も行いません。
 
 ## PX4 / PX-MLT / e-Better
 
@@ -286,7 +312,7 @@ Nix で管理するため、アプリ側でポートや保存先を変える際�
 
 ## recisdb の録画仕様
 
-すべてのローカルチューナー（PT3/PX4/A865R/TBS6812/Siano/DVB）は
+すべてのローカルチューナー（PT3/PX4/mAgicVISION/A865R/TBS6812/Siano/DVB）は
 `dtv.packages.recisdb` を使います。公開する録画パッケージは recisdb に統一し、
 公開していないパッケージ属性・設定オプションの選択は Nix 評価エラーになります。
 `args` と `argsBS4K` は recisdb の構文を使います。明示的な `command` は自動変換しません。

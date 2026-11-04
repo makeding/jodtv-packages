@@ -27,6 +27,8 @@ in
   mirakc-arib = callPackage ./mirakc-arib/package.nix { };
   mirakurun = callPackage ./mirakurun/package.nix { };
   mmt2ts = callPackage ./mmt2ts/package.nix { };
+  magicvision = callPackage ./magicvision/package.nix { };
+  magicvision-firmware = callPackage ./magicvision-firmware/package.nix { };
   nvencc = callPackage ./nvencc/package.nix { };
   pcsc-rw5100 = callPackage ./pcsc-rw5100/package.nix { };
   psisiarc = callPackage ./psisiarc/package.nix { };

@@ -56,6 +56,7 @@
           all = self.legacyPackages.${system};
           darwin = [
             "a865r-firmware"
+            "magicvision-firmware"
             "epgstation-h"
             "epgstation-upstream"
             "hiraku"
