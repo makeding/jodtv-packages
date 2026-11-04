@@ -16,12 +16,12 @@
   fetchFromGitHub,
 }:
 let
-  version = "1.1.1.4";
+  version = "1.1.1.5";
   src = fetchFromGitHub {
     owner = "rigaya";
     repo = "Amatsukaze";
     # Use the merged aarch64 fix for 1.1.1.4; later releases use their own tag.
-    rev = if version == "1.1.1.4" then "7bf52b86f746a8ee68d158a35a63bb818cdc6173" else version;
+    rev = if version == "1.1.1.5" then "7bf52b86f746a8ee68d158a35a63bb818cdc6173" else version;
     hash = "sha256-1Jy1YZowlBylhLkUegJ24GFH5WvKPfRuH7Oadu7rSSU=";
     fetchSubmodules = true;
   };
