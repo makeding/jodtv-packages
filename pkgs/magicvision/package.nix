@@ -12,12 +12,12 @@
 
 kernel.stdenv.mkDerivation {
   pname = "magicvision";
-  version = "unstable-2026-11-04-${kernel.version}";
+  version = "unstable-2026-11-05-${kernel.version}";
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "mAgicVISION";
-    rev = "17e4b8d13454b0190e4d15de77d74f46677a159a";
-    hash = "sha256-EvcBXae61WcBWoI+DV/sX0OZJLHlRZIqfetO+X8AN0M=";
+    rev = "4dc88548b71b4ff7ace5e796ab61e45624f564ee";
+    hash = "sha256-x7gH98kRUN4uynE77+PY0wIl+9TnlWqKtIsiaGbB4W4=";
   };
   nativeBuildInputs = kernel.moduleBuildDependencies;
   hardeningDisable = [ "pic" ];

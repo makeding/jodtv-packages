@@ -46,7 +46,6 @@ Japanese digital TV packages and reusable NixOS modules.
 ```nix
 inputs.jodtv-packages = {
   url = "github:makeding/jodtv-packages";
-  inputs.nixpkgs.follows = "nixpkgs";
 };
 ```
 
@@ -64,6 +63,10 @@ dtv.hirakud.enable = true;
 The `packages` module installs the package overlay. Individual service modules
 leave the package set to the consumer, so an existing overlay stack and local
 overrides keep their ordering. Importing a module does not enable a service.
+The flake input uses this repository's pinned nixpkgs. Making it follow the
+consumer's nixpkgs can change the standalone package derivations from those
+built in CI and reduce binary cache hits. The overlay and modules use the
+consumer's package set, so their cache hits also depend on its dependencies.
 To use packages without modules, add `inputs.jodtv-packages.overlays.default` to
 `nixpkgs.overlays`. The default module includes the overlay and all service
 modules with services off.
@@ -277,10 +280,11 @@ override those defaults. Supplying `mode` creates one entry without expansion;
 
 `magicvision` builds the [public driver](https://github.com/makeding/mAgicVISION)
 against the consuming `boot.kernelPackages`. `magicvision-firmware` extracts
-only `firmware.bin` from the pinned [v1 firmware release](https://github.com/makeding/mAgicVISION/releases/tag/v1);
+only `firmware.bin` from a pinned [firmware release](https://github.com/makeding/mAgicVISION/releases);
 no private firmware source or Debian installation script is used. Allow the
 unfree `magicvision` (which embeds firmware) and `magicvision-firmware` packages
 in your Nixpkgs policy. `nix build .#magicvision` uses the default Nixpkgs kernel.
+The daily updater pins the driver tag and firmware asset from the same latest full release.
 
 Each physical device has one frontend; XZ and DT295 switch between GR and BS/CS.
 

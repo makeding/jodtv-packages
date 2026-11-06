@@ -41,7 +41,10 @@ jobs:
           diagnostic-endpoint: ''
 
       - name: Check updater
-        run: python3 -B -m unittest discover -s scripts -p 'test_bump_deps.py'
+        run: python3 -B -m unittest discover -s scripts -p 'test_bump*.py'
+
+      - name: Update mAgicVISION release pair
+        run: python3 -B scripts/bump-magicvision.py
 
       - name: Update package sources and dependency hashes
         env:
@@ -64,6 +67,9 @@ jobs:
                 ;;
             esac
           done < <(git diff --name-only -- pkgs)
+          if ! git diff --quiet -- pkgs/magicvision/package.nix pkgs/magicvision-firmware/package.nix; then
+            nix build --impure --no-link --print-build-logs .#packages.x86_64-linux.magicvision
+          fi
 
       - name: Commit and push updates
         env:

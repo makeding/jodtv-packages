@@ -9,7 +9,6 @@
 ```nix
 inputs.jodtv-packages = {
   url = "github:makeding/jodtv-packages";
-  inputs.nixpkgs.follows = "nixpkgs";
 };
 ```
 
@@ -27,6 +26,10 @@ dtv.hirakud.enable = true;
 `packages` モジュールはパッケージの overlay を追加します。個別のサービスモジュールは
 パッケージセットを利用側に委ねるため、既存の overlay やローカル override の適用順を
 維持できます。モジュールをインポートするだけではサービスは有効になりません。
+flake input の `nixpkgs` はこのリポジトリの固定版を使います。利用側の `nixpkgs` に
+`follows` させると、上記の独立パッケージ出力は CI と異なる derivation になり、
+バイナリキャッシュが一致しないことがあります。overlay とモジュールは利用側の
+パッケージセットを使うため、その場合のキャッシュ一致は利用側の依存関係にも左右されます。
 モジュールを使わずパッケージだけ利用する場合は、
 `inputs.jodtv-packages.overlays.default` を `nixpkgs.overlays` に追加してください。
 `nixosModules.default` は overlay とすべてのサービスモジュールをまとめて読み込みます。
@@ -177,10 +180,11 @@ Hiraku の `listen` はアプリケーション本来の `address:port` 形式�
 
 `magicvision` は [公開ドライバー](https://github.com/makeding/mAgicVISION)を
 利用先の `boot.kernelPackages` 向けにビルドします。`magicvision-firmware` は
-固定ハッシュの [v1 firmware release](https://github.com/makeding/mAgicVISION/releases/tag/v1)
+固定ハッシュの [firmware release](https://github.com/makeding/mAgicVISION/releases)
 から `firmware.bin` だけを取り出します。非公開 FW ソースや Debian のインストール
 スクリプトは使いません。FW を含む `magicvision` と `magicvision-firmware` の
 unfree 許可が必要です。`nix build .#magicvision` は既定のカーネル向けです。
+日次更新では最新の正式リリースからドライバーのタグと FW アセットを一緒に固定し直します。
 各機器は 1 frontend で、XZ / DT295 は GR と BS/CS を切り替えて使用します。
 
 ```nix
