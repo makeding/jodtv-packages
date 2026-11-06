@@ -7,10 +7,10 @@
 
 stdenvNoCC.mkDerivation {
   pname = "magicvision-firmware";
-  version = "0.1.1";
+  version = "0.2.0";
   src = fetchurl {
-    url = "https://github.com/makeding/mAgicVISION/releases/download/v2/magicvision-firmware_0.1.1_all.deb";
-    hash = "sha256-pReuBxvAF1X/+2ikn+aLtiNvGit772mYxx1zYGE4CyY=";
+    url = "https://github.com/makeding/mAgicVISION/releases/download/v2-0.2.0/magicvision-firmware_0.2.0_all.deb";
+    hash = "sha256-O5XDbgeAdq8dpvujktnMdZFoAdFhp/5l1oJSBPh/R1c=";
   };
   nativeBuildInputs = [ dpkg ];
   dontUnpack = true;
