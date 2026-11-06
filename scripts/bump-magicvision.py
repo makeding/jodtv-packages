@@ -2,6 +2,7 @@
 """Update the mAgicVISION driver and firmware from one published release."""
 
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -18,10 +19,10 @@ def output(*command):
 
 
 def github_json(path):
-    return json.loads(output(
-        "curl", "--fail", "--silent", "--show-error", "--location", "--max-time", "60",
-        f"https://api.github.com/repos/{REPOSITORY}/{path}",
-    ))
+    command = ["curl", "--fail", "--silent", "--show-error", "--location", "--max-time", "60"]
+    if token := os.environ.get("GITHUB_TOKEN"):
+        command += ["--header", f"Authorization: Bearer {token}"]
+    return json.loads(output(*command, f"https://api.github.com/repos/{REPOSITORY}/{path}"))
 
 
 def field(contents, name):
