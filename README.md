@@ -333,6 +333,9 @@ BS4K は `--b61` と `argsBS4K`（`--cas-proxy` など）を渡します。
 `decode --b61` と実験的な DVB ISDB-S3 選局に対応します。デコーダーの既定値は変更しません。
 独自のカードリーダー優先機能（`--card`）は使えません。
 
+汎用 `driver = "dvb"` の Mirakurun tuner は、標準の DVBv5 選局に限り `recisdb session`
+を使います。切台時は同じ frontend を開いたまま demux/reader とチャンネルごとのデコーダー状態を作り直し、recisdb プロセスを再起動しません。明示的な `command` を指定した tuner、標準 DVB 以外、Hirakud の録画モードは従来の `recisdb tune` 経路を使います。BS4K は既存の `commandBS4K` / B61 経路のままです。
+
 ## libaribb61
 
 Linux/macOS 向けの独立した MMT/TLV ACAS デスクランブルライブラリです。

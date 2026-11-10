@@ -206,6 +206,26 @@ let
     ++ casProxyArgs t fourK
     ++ (if fourK then t.argsBS4K else t.args)
     ++ [ "-" ];
+  recisdbSessionEligible =
+    t:
+    t.driver == "dvb"
+    && t.command == [ ]
+    && t.device != null
+    && builtins.any (mode: mode != "BS4K") t.mode
+    && builtins.all (mode: builtins.elem mode [ "GR" "GR-ALT" "BS" "CS" "BS4K" ]) t.mode;
+  recisdbSessionArgv =
+    t:
+    [
+      (lib.getExe' cfg.packages.recisdb "recisdb")
+      "session"
+      "--device"
+      (if lib.hasPrefix "/dev/" t.device then t.device else "/dev/dvb/adapter${t.device}/frontend0")
+    ]
+    ++ lib.optionals (t.lnb && lib.any (m: builtins.elem m t.mode) [ "BS" "CS" "BS4K" ]) [ "--lnb" "15v" ]
+    ++ lib.optional (!t.b25) "--no-decode"
+    ++ lib.optional (!t.strip) "--no-strip"
+    ++ t.args;
+  recisdbSessionCommand = t: lib.escapeShellArgs (recisdbSessionArgv t);
   argv =
     t: fourK:
     if fourK && t.commandBS4K != [ ] then
@@ -257,7 +277,7 @@ let
         }
       else
         {
-          command = commandString t false;
+          command = if recisdbSessionEligible t then recisdbSessionCommand t else commandString t false;
         }
         // lib.optionalAttrs (bs4kCommand t) { commandBS4K = commandString t true; }
         // lib.optionalAttrs (isLocal t && t.device != null && lib.hasPrefix "/dev/" t.device) {

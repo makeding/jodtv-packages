@@ -421,6 +421,12 @@ ISDB-S3 tuning; decoder defaults stay unchanged.
 The upstream prioritized-card-reader extension is disabled; `--card` selection
 is therefore unavailable. Private library implementations remain consumer-owned.
 
+Mirakurun tuners using the generic `driver = "dvb"` use `recisdb session` for
+standard DVBv5 channels. A channel change keeps the frontend open, recreates the
+demux/reader and per-channel decoder state, and avoids restarting recisdb.
+Explicit `command` tuners, non-DVB capture, and Hirakud recording modes keep the
+one-shot `recisdb tune` path. BS4K keeps its existing `commandBS4K`/B61 path.
+
 ## libaribb61
 
 `libaribb61` is an independent streaming MMT/TLV ACAS descrambler library,

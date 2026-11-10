@@ -1036,7 +1036,7 @@ in
       test "$(${
         lib.replaceStrings [ "<channel>" ] [ "BS15_0" ]
           (builtins.head dvbCaptureConfig.services.mirakurun.tunerSettings).command
-      })" = "$(printf '%s\n' tune --channel BS15_0 --device /dev/dvb/adapter2/frontend0 --lnb 15v --no-strip -)"
+      })" = "$(printf '%s\n' session --device /dev/dvb/adapter2/frontend0 --lnb 15v --no-strip)"
       test "$(${
         lib.replaceStrings [ "<channel>" ] [ "BS17_0" ]
           (builtins.head dvbCaptureConfig.services.mirakurun.tunerSettings).commandBS4K
