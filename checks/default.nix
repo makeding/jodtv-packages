@@ -25,9 +25,6 @@ let
       ];
 in
 {
-  recisdb-dvb-if = pkgs.callPackage ../pkgs/recisdb/test-dvb-if.nix {
-    inherit (public.recisdb) libdvbv5;
-  };
   # Run the Rust B61 stream wrapper against the packaged external C library.
   recisdb-b61 = public.recisdb.overrideAttrs (old: {
     pname = "recisdb-b61-wrapper";

@@ -9,24 +9,20 @@
   libaribb25,
 }:
 let
-  # This dependency is private to recisdb's ISDB-S IF interface.
   recisdbDvb =
     (v4l-utils.override {
       withGUI = false;
       withBPF = false;
-    }).overrideAttrs
-      (old: {
-        patches = (old.patches or [ ]) ++ [ ./libdvbv5-isdbs-if.patch ];
-      });
+    });
 in
 rustPlatform.buildRustPackage {
   pname = "recisdb";
-  version = "1.3.2-unstable-2026-11-10";
+  version = "1.3.2-unstable-2026-11-11";
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "recisdb-rs";
-    rev = "231c4921d0dd65780d66e272d967af11517f7446";
-    hash = "sha256-jYPiB4Am2GzN5AbZDL7Ocwh2sHwTYhT5MqNlmQC4mtk=";
+    rev = "88c325c7a23f897088b0eb71b536e56b9d6ed2b7";
+    hash = "sha256-L1MV/n3Zs4pHFiagmoOqbXELoSDu2qtTctc394eZGMI=";
   };
   cargoHash = "sha256-IFa9E7OxNX+1p6bRNUGwVQIwXIBwTnd4qhma4TCOIYA=";
   buildNoDefaultFeatures = true;
