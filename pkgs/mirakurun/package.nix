@@ -29,7 +29,7 @@ buildNpmPackage rec {
     # sed -i '/\.yml", path);/a fs.chmodSync(path, 0o644);' source/src/Mirakurun/config.ts
   '';
 
-  npmDepsHash = "sha256-/InJerKS5SH9ckoSS6prJ+0/4clFE2BM1x5mWeHSO98=";
+  npmDepsHash = "sha256-UnRY4L/3h5sa+vRWHnxrpJzzta3bt6bm4URtWFRc6Ao=";
 
   nativeBuildInputs = [
     installShellFiles
