@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+from urllib.parse import quote
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -62,7 +63,7 @@ def update():
         raise ValueError(f"Expected one firmware asset for {tag}, found {len(assets)}")
     asset = assets[0]
     version = re.fullmatch(r"magicvision-firmware_([0-9][0-9A-Za-z.+~-]*)_all\.deb", asset["name"])[1]
-    url = f"https://github.com/{REPOSITORY}/releases/download/{tag}/{asset['name']}"
+    url = f"https://github.com/{REPOSITORY}/releases/download/{tag}/{quote(asset['name'], safe='')}"
     if asset["browser_download_url"] != url:
         raise ValueError("Unexpected firmware asset URL")
     commit = github_json(f"commits/{tag}")

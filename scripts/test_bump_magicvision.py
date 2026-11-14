@@ -21,6 +21,28 @@ COMMIT = {"sha": REVISION, "commit": {"committer": {"date": "2026-11-05T15:59:53
 
 
 class MagicvisionBumpTests(unittest.TestCase):
+    def test_release_with_encoded_firmware_version(self):
+        driver = MagicMock()
+        firmware = MagicMock()
+        driver.read_text.return_value = DRIVER
+        firmware.read_text.return_value = FIRMWARE
+        url = ("https://github.com/makeding/mAgicVISION/releases/download/v3-0.3.1/"
+               "magicvision-firmware_0.3.0%2Babi3_all.deb")
+        release = {"tag_name": "v3-0.3.1", "assets": [{
+            "name": "magicvision-firmware_0.3.0+abi3_all.deb",
+            "browser_download_url": url,
+        }]}
+        with patch.object(bump, "DRIVER", driver), patch.object(bump, "FIRMWARE", firmware), \
+             patch.object(bump, "github_json", side_effect=[release, COMMIT]), \
+             patch.object(bump, "source_hash", return_value="sha256-source"), \
+             patch.object(bump, "file_hash", return_value="sha256-firmware") as file_hash:
+            self.assertTrue(bump.update())
+        file_hash.assert_called_once_with(url)
+        updated = firmware.write_text.call_args.args[0]
+        self.assertIn('version = "0.3.0+abi3";', updated)
+        self.assertIn(f'url = "{url}";', updated)
+        driver.write_text.assert_called_once()
+
     def test_release_updates_driver_and_firmware_together(self):
         driver = MagicMock()
         firmware = MagicMock()
