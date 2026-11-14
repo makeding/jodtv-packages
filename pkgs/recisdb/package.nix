@@ -17,7 +17,7 @@ let
 in
 rustPlatform.buildRustPackage {
   pname = "recisdb";
-  version = "1.3.2-unstable-2026-11-11";
+  version = "1.3.2-unstable-2026-11-10";
   src = fetchFromGitHub {
     owner = "makeding";
     repo = "recisdb-rs";
