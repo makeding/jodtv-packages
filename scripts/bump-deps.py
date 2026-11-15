@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import sys
 import tomllib
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 # These track release tags; other packages track their default branch.
@@ -42,9 +42,16 @@ def native_system():
 
 def fetch(url):
     # Use the host's TLS-verified curl, including its normal CA/keychain support.
+    command = ["curl", "--fail", "--silent", "--show-error", "--location",
+               "--max-time", "60"]
+    headers = None
+    if (urlsplit(url).scheme == "https" and urlsplit(url).netloc == "api.github.com"
+            and (token := os.environ.get("GITHUB_TOKEN"))):
+        # Keep credentials out of argv and CalledProcessError diagnostics.
+        command += ["--header", "@-"]
+        headers = f"Authorization: Bearer {token}\n"
     return subprocess.run(
-        ["curl", "--fail", "--silent", "--show-error", "--location",
-         "--max-time", "60", url], check=True, stdout=subprocess.PIPE, text=True,
+        [*command, url], input=headers, check=True, stdout=subprocess.PIPE, text=True,
     ).stdout
 
 

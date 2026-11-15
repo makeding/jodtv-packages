@@ -11,6 +11,30 @@ spec.loader.exec_module(bump)
 
 
 class BumpTests(unittest.TestCase):
+    def test_github_api_uses_workflow_token_without_exposing_it_in_argv(self):
+        with patch.dict(bump.os.environ, {"GITHUB_TOKEN": "test-secret"}), \
+             patch.object(bump.subprocess, "run") as run:
+            run.return_value.stdout = '{"sha":"commit"}'
+            self.assertEqual(bump.fetch("https://api.github.com/repos/nekohkr/casproxyserver/commits/HEAD"),
+                             '{"sha":"commit"}')
+        self.assertIn("@-", run.call_args.args[0])
+        self.assertNotIn("test-secret", " ".join(run.call_args.args[0]))
+        self.assertEqual(run.call_args.kwargs["input"], "Authorization: Bearer test-secret\n")
+
+    def test_fetch_does_not_send_token_to_other_origins_or_without_token(self):
+        for url in ("https://raw.githubusercontent.com/owner/repo/main/package.json",
+                    "https://git.huggy.moe/api/v1/repos/owner/repo/commits",
+                    "https://api.github.com.example.invalid/repos/owner/repo",
+                    "http://api.github.com/repos/owner/repo"):
+            with self.subTest(url=url), patch.dict(bump.os.environ, {"GITHUB_TOKEN": "test-secret"}), \
+                 patch.object(bump.subprocess, "run") as run:
+                bump.fetch(url)
+                self.assertIsNone(run.call_args.kwargs["input"])
+                self.assertNotIn("--header", run.call_args.args[0])
+        with patch.dict(bump.os.environ, {}, clear=True), patch.object(bump.subprocess, "run") as run:
+            bump.fetch("https://api.github.com/repos/owner/repo")
+            self.assertIsNone(run.call_args.kwargs["input"])
+
     def test_mmt2ts_tracks_stable_releases_in_daily_updates(self):
         self.assertIn("mmt2ts", bump.packages())
         args = argparse.Namespace(version=None, system="aarch64-darwin", build=False)
