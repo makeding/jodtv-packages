@@ -21,12 +21,12 @@ callPackage ../honomitv/build.nix (
       pythonInterpreter
       ;
     pname = "konomitv";
-    version = "0.15.0-dev-unstable-2026-11-14";
+    version = "0.15.0-dev-unstable-2026-11-16";
     src = fetchFromGitHub {
       owner = "tsukumijima";
       repo = "KonomiTV";
-      rev = "687b904bb0a2cbb329596fd7b0368c09afe19a6c";
-      hash = "sha256-59S9R2zPGFw/b8KvdfXUZt4eMqcMNI+0xotbMedz3A8=";
+      rev = "af98b172eb7a0e9df7683435c706c84bedd9231e";
+      hash = "sha256-R/diHC9tL6BJHHYk5WhLl0voeS4OlBLR9d83H6/NfPw=";
     };
     yarnHash = "sha256-XvHYRbIQVw4DDRGzPp/XZavbJjxw49Tzb53P+5sIeH4=";
     description = "KonomiTV: Kept Organized, Notably Optimized, Modern Interface TV media server";
