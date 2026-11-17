@@ -83,7 +83,16 @@
             else
               builtins.attrNames all;
         in
-        lib.getAttrs names all
+        lib.getAttrs names all // {
+          # nix-update 1.16 uses metadata paths that may not exist in the store.
+          # Archive materializes each fresh source snapshot before evaluation.
+          bump-nix-update = (pkgsFor system).nix-update.overrideAttrs (old: {
+            postInstall = (old.postInstall or "") + ''
+              substituteInPlace $out/lib/python*/site-packages/nix_update/options.py \
+                --replace-fail '["nix", "flake", "metadata", "--json"]' '["nix", "flake", "archive", "--json"]'
+            '';
+          });
+        }
       );
 
       nixosModules = {

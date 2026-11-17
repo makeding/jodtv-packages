@@ -52,7 +52,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          nix shell --inputs-from . nixpkgs#nix-update nixpkgs#python3 \
+          nix shell .#bump-nix-update --inputs-from . nixpkgs#python3 \
             --command python3 scripts/bump-deps.py --all --system x86_64-linux
 
       - name: Validate updated packages

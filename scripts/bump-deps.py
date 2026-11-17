@@ -170,9 +170,10 @@ def main(argv=None):
     if not re.fullmatch(r"[a-z0-9_]+-(linux|darwin)", args.system):
         parser.error("invalid --system")
     if not args.dry_run and not shutil.which("nix-update"):
-        # Use an ephemeral Nix environment, preserving arguments as individual words.
-        command = shlex.join([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])
-        os.execvp("nix-shell", ["nix-shell", "-p", "nix-update", "--run", command])
+        # Use the same pinned updater as CI, preserving arguments as individual words.
+        os.chdir(ROOT)
+        os.execvp("nix", ["nix", "shell", ".#bump-nix-update", "--command",
+                          sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])
     for name, command in zip(names, commands(names, args)):
         mode = version_mode(name, args)
         if mode.startswith("branch"):
