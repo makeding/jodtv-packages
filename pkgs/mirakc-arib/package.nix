@@ -13,14 +13,14 @@
 
 stdenv.mkDerivation rec {
   pname = "mirakc-arib";
-  version = "0.24.43";
+  version = "0.24.44";
 
   src = fetchFromGitHub {
     owner = "mirakc";
     repo = "mirakc-arib";
     tag = version;
     fetchSubmodules = true;
-    hash = "sha256-waR0uSQWmtAM+xrN8YFGoPkizif6176lU0Arv56rKGA=";
+    hash = "sha256-1p/OUQ/YS3xO+VyHaMolf2SUMBOB81zYoY/edJs3pOA=";
   };
 
   nativeBuildInputs = [
